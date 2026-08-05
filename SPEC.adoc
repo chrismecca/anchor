@@ -1,7 +1,6 @@
+:doctitle: anchor specification
+
 = anchor: specification
-:version: 0.1.0
-:status: pre-implementation
-:license: MIT
 
 This document describes what anchor is, what it does, and what it
 deliberately does not do. It is versioned separately from the
