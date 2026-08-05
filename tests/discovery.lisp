@@ -9,8 +9,12 @@
         #'string<))
 
 (define-test (discovery urls)
-  (is equal '("/" "/about/" "/posts/" "/posts/2026/first-post/") (urls)
-      "Directory structure is URL structure, and the root index is /."))
+  (is equal '("/" "/about/" "/posts/" "/posts/2026/a-draft/"
+              "/posts/2026/first-post/" "/posts/2026/second-post/")
+      (urls)
+      "Directory structure is URL structure, and the root index is /.
+Discovery reports what is on disk, drafts included: leaving them out is the
+graph's decision, not the filesystem walk's."))
 
 (define-test (discovery ignores)
   (let ((urls (urls)))

@@ -9,8 +9,8 @@
 ;;;; the site completely, so if a default layout needs a wrapper element and a
 ;;;; class on every node, the layout is wrong.
 ;;;;
-;;;; The SITE argument is accepted and unused. The site graph is not built
-;;;; yet, and the layouts that need it are the ones that list other pages.
+;;;; A layout that renders one page in isolation ignores the site. The ones
+;;;; that list other pages are why the argument is there.
 
 (in-package #:anchor)
 
@@ -38,6 +38,39 @@ by building a different list."
        `(:p :class "meta"
             (:time :datetime ,(page-date page) ,(page-date-human page))))
     (:raw ,(page-body-html page))))
+
+(defun index-row (page)
+  "One row of an index: a linked title and a date, and nothing else.
+A dated list of titles is the densest useful form an index can take, so
+nothing else goes in one."
+  `(:li (:a :href ,(page-url page) ,(page-title page))
+        ;; The separator is in the markup rather than left to the stylesheet.
+        ;; A stylesheet has to be able to restyle the page completely; it does
+        ;; not have to be present for the page to read.
+        ,@(when (page-date page)
+            `(" " (:time :datetime ,(page-date page) ,(page-date-human page))))))
+
+(defun front-page (page site)
+  "The site index: the newest page with its excerpt, then the rest as a list.
+Full articles are not repeated here. Beyond page weight, cl-adoc gives
+headings deterministic ids, so two whole articles in one document would
+produce duplicate element ids. An excerpt cannot."
+  (let* ((listed (remove page (site-chronology site)))
+         (newest (first listed))
+         (remaining (rest listed)))
+    `(:article
+      (:h1 ,(page-title page))
+      (:raw ,(page-body-html page))
+      ,(when newest
+         `(:section
+           (:h2 (:a :href ,(page-url newest) ,(page-title newest)))
+           ,(when (page-date newest)
+              `(:p :class "meta"
+                   (:time :datetime ,(page-date newest)
+                          ,(page-date-human newest))))
+           (:raw ,(page-excerpt-html newest))))
+      ,(when remaining
+         `(:nav (:ul ,@(mapcar #'index-row remaining)))))))
 
 (defun page-shell (page site body)
   "The whole document around BODY."

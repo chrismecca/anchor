@@ -1,0 +1,10 @@
+= A Draft
+:date: 2026-09-01
+:draft:
+
+Carrying :draft: keeps this page out of the graph entirely, so it is
+absent from listings and from the output unless drafts are asked for.
+
+Its date is the newest in the fixture on purpose: were drafts merely
+hidden from the output rather than left out of the graph, this page
+would still take the front page's lead slot.
