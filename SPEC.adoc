@@ -1,0 +1,475 @@
+= anchor: specification
+:version: 0.1.0
+:status: pre-implementation
+:license: MIT
+
+This document describes what anchor is, what it does, and what it
+deliberately does not do. It is versioned separately from the
+implementation. Nothing described here is implemented yet; this
+document precedes the code on purpose.
+
+Every section carries a milestone:
+
+v1:: Required before the first tagged release.
+later:: Wanted, deferred, spec'd only far enough to keep the door open.
+non-goal:: Will not be built. Listed so the answer is on record.
+
+This file restricts itself to the AsciiDoc subset cl-adoc parses.
+anchor must be able to render its own specification.
+
+== Thesis
+
+anchor is a static site generator for AsciiDoc, written in Common
+Lisp, built on cl-adoc.
+
+Its one distinguishing commitment: *the build operates on documents,
+not on strings.* cl-adoc parses a document into a tree and renders the
+tree separately. anchor uses the tree. Titles, dates, summaries,
+headings, link targets, and image references are read from the parsed
+document, never recovered from rendered HTML and never duplicated into
+a parallel front-matter block.
+
+Consequences that follow from this and are not separate features:
+
+* No front matter. The document is the metadata.
+* No `<!--more-->` marker. Excerpts are subtrees.
+* No HTML post-processing pass. Nothing regexes the output.
+* Link and media checking is a tree walk, not a parse of the result.
+
+The secondary commitment is thinness. anchor should be readable in an
+afternoon. When a feature can be replaced by a convention, the
+convention wins.
+
+== Non-goals
+
+Status: non-goal
+
+These will not be built. Users who need them should compose anchor
+with other tools.
+
+* Plugin system. Layouts and emitters are ordinary Lisp functions in
+  the user's own code; that is the extension mechanism.
+* Theme gallery or theme package format. A theme is a CSS file.
+* Asset pipeline: bundling, minification, transpilation, SCSS/LESS.
+* Image processing: resizing, format conversion, responsive variants.
+  anchor copies bytes.
+* Internationalisation and translation workflows.
+* Shortcodes, or any macro layer above AsciiDoc. cl-adoc's SPEC.adoc
+  governs what the input language is.
+* Data-file cascades, content collections, or a query language.
+* Deployment. anchor produces a directory. Getting it onto a host is
+  rsync, git, or a CI job, and is out of scope.
+* Comments, analytics, or any runtime service.
+* CDN configuration, cache headers, edge rules.
+
+== Terminology
+
+document:: A parsed cl-adoc tree plus its source path.
+page:: A document that will be written to the output tree at a URL.
+asset:: A file copied to the output tree verbatim.
+bundle:: A directory containing `index.adoc` and, usually, its media.
+site:: The whole graph: every page, asset, and the relations between
+  them.
+emitter:: A function from a site to a list of output files.
+layout:: A function from a page and a site to an HTML tree.
+
+== Site layout
+
+Status: v1
+
+=== Source tree
+
+The filesystem is the data model. Directory structure is URL
+structure. There is no permalink configuration and no slug field.
+
+....
+mysite/
+  _anchor.lisp
+  _media/
+    portrait.jpg
+  index.adoc
+  about/
+    index.adoc
+  posts/
+    _anchor.lisp
+    index.adoc
+    2026/
+      writing-cl-adoc/
+        index.adoc
+        parser-tree.png
+      anchor-design/
+        index.adoc
+        pipeline.svg
+        repl.gif
+  style.css
+....
+
+=== What is a page
+
+A directory containing `index.adoc` is a page. Its URL is its path
+relative to the source root, with a trailing slash.
+
+....
+posts/2026/anchor-design/index.adoc  ->  /posts/2026/anchor-design/
+index.adoc                           ->  /
+....
+
+`.adoc` files not named `index.adoc` are not pages. They are ignored
+by discovery and available to be included by documents that want
+them.
+
+This makes a section a first-class thing: a directory that is both a
+page and a parent of pages. `posts/index.adoc` is the archive page and
+its children are its posts, with no configuration expressing that
+relationship.
+
+=== Media
+
+Media colocates with the page that uses it. A reference resolves
+page-local first, then walks up the tree looking for `_media/`.
+
+....
+image::pipeline.svg[]          resolved in the bundle
+image::_media/portrait.jpg[]   resolved by walking up
+....
+
+Colocation is the default because it makes a post and its media one
+movable, deletable unit, keeps references short enough to survive URL
+restructuring, and removes naming collisions entirely.
+
+`_media/` exists for genuinely shared assets and uses the same
+parent-to-child walk as configuration. There is one cascade rule in
+anchor and both things use it.
+
+=== Reserved names
+
+Any file or directory whose name begins with `_` is reserved and is
+never written to the output tree, with the exception of `_media/`,
+whose referenced contents are copied. Currently reserved:
+
+`_anchor.lisp`:: Configuration for this directory and below.
+`_media/`:: Shared assets for this directory and below.
+`_site/`:: Output. Never read.
+
+=== Large media
+
+Status: later
+
+Files that should not live in git are declared in a manifest that maps
+logical names to a remote base URL. anchor rewrites matching
+references at build time and verifies nothing. Synchronising the
+remote store is the user's job and belongs in a Makefile.
+
+== Configuration
+
+Status: v1
+
+`_anchor.lisp` may appear in any directory. It is ordinary Lisp,
+loaded, evaluated, and merged parent-to-child, so a subdirectory
+overrides its ancestors without any central registry.
+
+[source,lisp]
+----
+(:title      "chrismecca"
+ :base-url   "https://example.com"
+ :author     "Chris Mecca"
+ :layout     'my-site:article
+ :feed-limit 20)
+----
+
+anchor loads and evaluates code from the source tree. The source tree
+is assumed to be yours. anchor is not a sandbox and does not attempt
+to be one.
+
+== The document
+
+Status: v1
+
+anchor calls into cl-adoc and does not reimplement any part of it.
+
+[source,lisp]
+----
+(adoc:parse-file path)
+(adoc:document-title doc)
+(adoc:document-attribute doc "date")
+(adoc:document-headings doc)
+(adoc:document-references doc)
+(adoc:document-uses-stem-p doc)
+(adoc:render-html doc)
+----
+
+Required attributes on a page:
+
+`:date:`:: ISO 8601. Absent on a page under a dated section is an
+  error; absent elsewhere means the page is undated and is excluded
+  from chronological listings.
+
+Optional attributes anchor reads: `:tags:`, `:description:`,
+`:draft:`.
+
+The document title is the AsciiDoc title. There is no `title:` key
+anywhere in configuration or elsewhere.
+
+=== Excerpts
+
+The excerpt of a page is its preamble if it has one, otherwise its
+first paragraph node, rendered as a subtree. No marker, no attribute,
+no truncation of rendered HTML.
+
+=== Content-derived output
+
+Where a document can answer a question about itself, anchor asks it
+rather than requiring the author to declare it. `document-uses-stem-p`
+determines whether a math renderer is referenced on that page. The
+same principle governs future additions: the document tells the layout
+what it needs.
+
+== The site graph
+
+Status: v1
+
+The graph is built once, after all documents are parsed, before any
+rendering. It answers:
+
+* Chronology: pages in date order, and each page's predecessor and
+  successor within its section.
+* Sections: each page's parent, children, and ancestors.
+* Taxonomy: tag to pages, pages to tags.
+* References: which pages reference which assets and which other
+  pages, and the inverse.
+
+The reference relation is the whole of media management. It is
+computed from `document-references` and it makes every integrity check
+in this document a hash-table lookup.
+
+=== Incremental builds
+
+Status: later
+
+The reference relation is also the dependency graph. Rebuilding only
+what a change invalidates is deferred but must not be designed out:
+the graph is the mechanism, and v1 builds everything only because
+building everything is fast enough at blog scale.
+
+== Layouts
+
+Status: v1
+
+A layout is a function of a page and a site returning an HTML tree as
+s-expressions. There is no template language. Common Lisp is the
+template language.
+
+[source,lisp]
+----
+(defun article (page site)
+  `(:article
+    (:h1 ,(page-title page))
+    (:p :class "meta" (:time :datetime ,(page-date page)
+                             ,(page-date-human page)))
+    (:raw ,(page-body-html page))))
+----
+
+`(:raw ...)` inserts cl-adoc's rendered HTML without escaping. It is
+the only escape hatch and exists for exactly that purpose.
+
+Layouts are selected by the `:layout` key and therefore inherit
+through the configuration cascade like everything else.
+
+=== Emitted HTML
+
+anchor's default layouts emit semantic, class-light HTML: `article`,
+`h1` through `h6`, `time` with `datetime`, `nav`, `footer`, `figure`,
+`figcaption`. This is an obligation, not a preference. A stylesheet
+alone must be able to restyle the site completely. If a default layout
+requires wrapper elements and a class on every node, the layout is
+wrong.
+
+== Styles
+
+Status: v1
+
+A stylesheet is a CSS file the user writes. anchor copies it. anchor
+does not generate, compile, bundle, minify, fingerprint, or inline
+CSS.
+
+A theme is one CSS file and optionally one layout function.
+
+Every default layout emits, in `head`:
+
+* `meta name="viewport" content="width=device-width, initial-scale=1"`
+* `meta name="color-scheme" content="light dark"`
+
+Light and dark are the stylesheet's business: custom properties and one
+`prefers-color-scheme` block. anchor ships no theme toggle and no
+JavaScript for it.
+
+== The article shape
+
+Status: v1
+
+The default article page is, in order: title, date, body. The body is
+whatever the document contains, in document order.
+
+The byline is not repeated per page. On a single-author site it is
+noise; the date is what a reader needs to judge whether a technical
+post is still true. Author belongs in the site footer and in feed
+metadata.
+
+== The front page
+
+Status: v1
+
+The front page is the most recent page rendered with its excerpt,
+followed by a compact list of every remaining page as title and date,
+most recent first.
+
+Full articles are not repeated on the index. Beyond page weight, cl-adoc
+emits deterministic heading anchors, so two full articles on one
+document produce duplicate element ids. The excerpt avoids this by
+construction.
+
+List rows carry title and date and nothing else. A dated list of titles
+is the densest useful form an index can take.
+
+Pagination is Status: later. Until a site is large enough to need it,
+one page is the archive.
+
+== Emitters
+
+Status: v1
+
+An emitter is a function of a site returning a list of output files.
+Every derived artifact in anchor uses this one interface, which is why
+none of them is a subsystem.
+
+[source,lisp]
+----
+(defun atom-feed (site)
+  (list (output "feed.xml" (render-feed site))))
+----
+
+Shipped in v1: Atom feed, `sitemap.xml`, `robots.txt`.
+
+Shipped later: search index as JSON, redirect map.
+
+Head-tag composition is the same idea applied to `head`: a list of
+functions from page and site to element forms. `title`, `meta
+description` from the document's excerpt, canonical link, and Open
+Graph and Twitter card tags are members of that list and can be
+replaced wholesale.
+
+That list plus the emitter list is the entirety of anchor's answer to
+search-engine and social-preview concerns. There is no SEO feature.
+
+=== robots.txt and crawler policy
+
+anchor emits a `robots.txt` and, optionally, an `llms.txt`. Both are
+advisory: compliant crawlers honour them and non-compliant crawlers do
+not. Enforcement happens at the server or edge, which anchor does not
+touch and will not configure. The set of user-agent strings worth
+naming changes faster than this specification does and is not enumerated
+here.
+
+== Output
+
+Status: v1
+
+Output is written to `_site/`. Assets are copied there rather than
+served from the source tree, so that the output directory is
+self-contained, the development server has one root, and "orphan"
+has an unambiguous definition.
+
+Output filenames are stable. Assets are not content-hashed. For a
+personal site, permanent URLs are worth more than cache-busting.
+Content hashes are computed, but for identity — duplicate detection —
+not for naming.
+
+== Build behaviour
+
+Status: v1
+
+Build problems are signalled as conditions with restarts, not
+collected into a list of strings.
+
+Conditions:
+
+`missing-reference`:: A link or image target that does not exist.
+`duplicate-slug`:: Two pages resolving to one URL.
+`unreadable-document`:: cl-adoc could not parse the file.
+`missing-date`:: A page requiring a date does not have one.
+
+Restarts offered where meaningful: `skip-page`, `use-placeholder`,
+`continue`.
+
+The policy is bound at the top of the build:
+
+`:strict`:: Any condition aborts. This is what CI uses.
+`:permissive`:: Report and continue. This is what `--force` uses.
+`:interactive`:: Enter the debugger at the offending node. This is the
+  default when building from a REPL, and it is the reason anchor is
+  written in Lisp rather than something else.
+
+== Command line
+
+Status: v1
+
+`anchor build`:: Build the site into `_site/`.
+`anchor serve`:: Build, serve `_site/`, rebuild on change.
+`anchor check`:: Run integrity checks and exit non-zero on failure.
+
+=== check
+
+`check` reports, from the reference relation:
+
+missing:: Referenced, does not exist.
+orphans:: Exists, referenced by nothing. Reported, never deleted.
+duplicates:: Identical content under different names.
+weight:: Total bytes per page, and the largest assets.
+
+`orphans` and `weight` are the two that matter in year three, and both
+are a walk plus a hash table.
+
+== Development server
+
+Status: v1
+
+`anchor serve` holds the site graph in the image. Recompiling a layout
+at the REPL affects the next request. `(anchor:page "posts/2026/anchor-design")`
+returns the page object. Rebuilding a single page is a function call.
+
+This is not a hot-reload feature. It is what having an image gets you,
+and it is documented here so that it does not get designed away.
+
+== Compatibility
+
+Status: v1
+
+Implementation:: SBCL. Other implementations are untested rather than
+  unsupported.
+Build:: ocicl, as with cl-adoc.
+Version:: 0.x. The Lisp interface may change between releases.
+License:: MIT.
+
+anchor tracks cl-adoc's released interface. It does not depend on
+cl-adoc internals and does not work around cl-adoc bugs; those get
+fixed upstream.
+
+== Open questions
+
+These are unresolved and are recorded rather than answered.
+
+. Should the HTML tree be serialised by a small internal function or
+  by spinneret? Internal keeps the dependency list at one entry and is
+  perhaps a hundred lines. spinneret is better than that hundred lines
+  will be.
+. Should drafts be excluded by attribute (`:draft:`), by directory
+  (`_drafts/`), or by date being in the future? Attribute is simplest;
+  future-dating composes better with scheduling.
+. Does `posts/index.adoc` get to override how its children are listed,
+  or is listing purely a layout concern? The cascade makes the former
+  cheap and the latter cleaner.
+. Should tag pages exist in v1, or is a single `/tags/` page with
+  grouped links enough?
+. Is `_media/` resolution by upward walk too magical? The alternative
+  is requiring an explicit relative path, which is more honest and
+  more annoying.
