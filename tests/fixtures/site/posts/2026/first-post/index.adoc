@@ -1,0 +1,11 @@
+= The First Post
+:date: 2026-08-05
+:tags: lisp, asciidoc
+
+A lead paragraph, which is what an excerpt will be made of once there is
+a front page to put one on.
+
+== A section
+
+Body text with `code`, *bold*, and a character that means something to
+HTML: a < b.

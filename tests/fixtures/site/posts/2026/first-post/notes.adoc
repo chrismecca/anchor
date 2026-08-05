@@ -1,0 +1,2 @@
+An .adoc file that is not named index.adoc is not a page. It exists to
+be included by a document that wants it, and discovery ignores it.

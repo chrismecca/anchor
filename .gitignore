@@ -1,1 +1,11 @@
+ocicl/
+
+_site/
+
+*.fasl
+*.fas
+*.lib
+*.dx32fsl
+*.dx64fsl
+
 .DS_Store

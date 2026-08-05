@@ -1,0 +1,5 @@
+= A Sample Site
+:date: 2026-01-04
+
+The root index.adoc is the page at `/`, the same way every other
+directory holding an index.adoc is the page at its own path.
