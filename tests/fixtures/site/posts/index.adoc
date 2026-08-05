@@ -1,0 +1,5 @@
+= Posts
+:date: 2026-02-11
+
+A section is a directory that is both a page and the parent of pages.
+Nothing configures that relationship.

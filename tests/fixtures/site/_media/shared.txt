@@ -1,0 +1,2 @@
+A reserved directory. Its referenced contents are copied once the site
+graph knows what references what; until then nothing here is written.

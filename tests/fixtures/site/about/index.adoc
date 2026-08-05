@@ -1,0 +1,4 @@
+= About
+
+A page with no date. Undated pages are still pages; they are only
+excluded from listings that are chronological.

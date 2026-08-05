@@ -1,0 +1,12 @@
+alexandria, ghcr.io/ocicl/alexandria@sha256:e433c2e076ed3bcf8641b97b00192680db2201d305efac9293539dee88c7fbf7, alexandria-20240503-8514d8e/alexandria.asd
+documentation-utils, ghcr.io/ocicl/documentation-utils@sha256:b2a1b3f3bcd1a738af85ae2b0168d408c177661eab6d6bbebb254e394d983f54, documentation-utils-20230511-98630dd/documentation-utils.asd
+esrap, ghcr.io/ocicl/esrap@sha256:d1748dc272d987937d759d2376dc18027efb1ed84c4b3561a367be3b4233183a, esrap-20251010-54debc5/esrap.asd
+form-fiddle, ghcr.io/ocicl/form-fiddle@sha256:58b6cdf3909911b876fb8b240ae4e2cfa274acd93d78e2fc65d1d981a295ce0a, form-fiddle-20260218-a4481cc/form-fiddle.asd
+multilang-documentation-utils, ghcr.io/ocicl/documentation-utils@sha256:b2a1b3f3bcd1a738af85ae2b0168d408c177661eab6d6bbebb254e394d983f54, documentation-utils-20230511-98630dd/multilang-documentation-utils.asd
+parachute, ghcr.io/ocicl/parachute@sha256:46efa9a7204969f1f439f9d83f3d7f9d052901e945a7f9ca27edc9e06de27a1a, parachute-20260226-c365ecc/parachute.asd
+parachute-fiveam, ghcr.io/ocicl/parachute@sha256:46efa9a7204969f1f439f9d83f3d7f9d052901e945a7f9ca27edc9e06de27a1a, parachute-20260226-c365ecc/compat/parachute-fiveam.asd
+parachute-lisp-unit, ghcr.io/ocicl/parachute@sha256:46efa9a7204969f1f439f9d83f3d7f9d052901e945a7f9ca27edc9e06de27a1a, parachute-20260226-c365ecc/compat/parachute-lisp-unit.asd
+parachute-prove, ghcr.io/ocicl/parachute@sha256:46efa9a7204969f1f439f9d83f3d7f9d052901e945a7f9ca27edc9e06de27a1a, parachute-20260226-c365ecc/compat/parachute-prove.asd
+trivial-custom-debugger, ghcr.io/ocicl/trivial-custom-debugger@sha256:b72a9d829d2635982c5d07604c24b22158cb550cd6b2915df2280ae59922be11, trivial-custom-debugger-20240503-802473c/trivial-custom-debugger.asd
+trivial-indent, ghcr.io/ocicl/trivial-indent@sha256:2969bd1dc3cefd22fd1b0c5aeec664d4217a2593fe03bb043d8b6958aabc8b2a, trivial-indent-20250813-87b35ff/trivial-indent.asd
+trivial-with-current-source-form, ghcr.io/ocicl/trivial-with-current-source-form@sha256:955baad39fb52d9d02af21ea36442c9675419c2486392279f669ada9788f3e3b, trivial-with-current-source-form-20240503-dc3fff9/trivial-with-current-source-form.asd
