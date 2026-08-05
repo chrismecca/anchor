@@ -170,9 +170,9 @@ overrides its ancestors without any central registry.
 
 [source,lisp]
 ----
-(:title      "chrismecca"
+(:title      "johndoe"
  :base-url   "https://example.com"
- :author     "Chris Mecca"
+ :author     "John Doe"
  :layout     'my-site:article
  :feed-limit 20)
 ----
