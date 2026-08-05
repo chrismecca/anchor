@@ -74,6 +74,38 @@ Every other test passes an absolute path, so nothing else covers this."))
       (uiop:delete-directory-tree output :validate t
                                          :if-does-not-exist :ignore))))
 
+(define-test (build front-page)
+  (with-built-site (output)
+    (let ((html (read-output output "index.html")))
+      (true (search "<h1>A Sample Site</h1>" html))
+      (true (search "<h2><a href=\"/posts/2026/first-post/\">The First Post</a></h2>"
+                    html)
+            "The newest page leads, linked and with its excerpt.")
+      (true (search "A lead paragraph" html))
+      (false (search "Body text with <code>code</code>" html)
+             "Its body is not repeated on the index, only its excerpt.")
+      (true (search "<a href=\"/posts/2026/second-post/\">The Second Post</a>" html)
+            "Everything remaining is a row of title and date.")
+      (false (search "chronology has something to order" html)
+             "A row carries no excerpt."))))
+
+(define-test (build drafts)
+  (with-built-site (output)
+    (false (read-output output "posts/2026/a-draft/index.html")
+           "A draft is not written.")
+    (false (search "A Draft" (read-output output "index.html"))
+           "Nor listed."))
+  (let ((output (temporary-output)))
+    (unwind-protect
+         (progn
+           (anchor:build (fixture-site) :output output :drafts t)
+           (true (read-output output "posts/2026/a-draft/index.html")
+                 "Asking for drafts writes them.")
+           (true (search "A Draft" (read-output output "index.html"))
+                 "And the front page leads with it, since it is the newest."))
+      (uiop:delete-directory-tree output :validate t
+                                         :if-does-not-exist :ignore))))
+
 (define-test (build assets)
   (with-built-site (output)
     (true (read-output output "style.css")

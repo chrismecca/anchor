@@ -18,7 +18,7 @@
   url
   document)
 
-(defun site-root (root)
+(defun resolve-root (root)
   "ROOT as an absolute, resolved directory pathname.
 A page's URL is its path relative to the root, and that subtraction needs
 both sides in the same form. Merely making the path absolute is not enough:
@@ -60,7 +60,7 @@ handling anchor's build errors does not have to know what parses the input."
 An .adoc file not named index.adoc is not a page; it is there to be included
 by a document that wants it. A SKIP-PAGE restart is offered around each page
 so that one unparseable document does not end the build."
-  (loop with root = (site-root root)
+  (loop with root = (resolve-root root)
         for directory in (content-directories root)
         for source = (merge-pathnames "index.adoc" directory)
         when (probe-file source)
@@ -98,12 +98,38 @@ it behind a guess."
              (format nil "~a ~d, ~d" (aref *month-names* (1- month)) day year)))
           date))))
 
+(defun page-draft-p (page)
+  "Whether PAGE carries :draft:.
+The attribute's presence is what counts and its value is never read, so
+`:draft: false` is still a draft. Deleting the line is how a draft is
+published. One rule, and no table of what counts as false."
+  (and (adoc:document-attribute (page-document page) "draft") t))
+
+(defun render-blocks (blocks)
+  "BLOCKS rendered as an HTML fragment."
+  (let ((backend (make-instance 'adoc:html5)))
+    (with-output-to-string (out)
+      (dolist (block blocks)
+        (adoc:render-node block backend out)))))
+
 (defun page-body-html (page)
   "PAGE's blocks rendered as HTML, without its title.
 cl-adoc's RENDER-HTML emits the document title as an h1, which a layout
 supplies itself from PAGE-TITLE, so the blocks are rendered one at a time
 here instead."
-  (let ((backend (make-instance 'adoc:html5)))
-    (with-output-to-string (out)
-      (dolist (block (adoc:document-blocks (page-document page)))
-        (adoc:render-node block backend out)))))
+  (render-blocks (adoc:document-blocks (page-document page))))
+
+(defun page-preamble (page)
+  "PAGE's blocks up to its first heading."
+  (loop for block in (adoc:document-blocks (page-document page))
+        until (adoc:heading-p block)
+        collect block))
+
+(defun page-excerpt-html (page)
+  "PAGE's preamble as HTML, or its first paragraph when it has no preamble.
+This is a subtree of the parsed document rendered on its own. There is no
+marker in the source, no attribute, and nothing truncates rendered HTML."
+  (render-blocks
+   (or (page-preamble page)
+       (let ((paragraph (adoc:find-node #'adoc:paragraph-p (page-document page))))
+         (and paragraph (list paragraph))))))

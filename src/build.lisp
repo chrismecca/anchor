@@ -17,11 +17,20 @@ the root page becomes \"index.html\"."
   (merge-pathnames (concatenate 'string (subseq (page-url page) 1) "index.html")
                    output))
 
+(defun page-layout (page site)
+  "The layout function for PAGE.
+The root page gets the front page and every other page gets the article.
+This is provisional: layouts are chosen by the :layout key once the
+configuration cascade exists, and this rule goes away when it does."
+  (declare (ignore site))
+  (if (string= (page-url page) "/") #'front-page #'article))
+
 (defun render-page (page site)
   "PAGE as a complete HTML document."
   (with-output-to-string (out)
     (write-line "<!DOCTYPE html>" out)
-    (serialize (page-shell page site (article page site)) out)))
+    (serialize (page-shell page site (funcall (page-layout page site) page site))
+               out)))
 
 (defun write-page (page output &optional site)
   "Write PAGE into OUTPUT and return the path written."
@@ -53,19 +62,20 @@ are skipped along with the directories holding them."
            (uiop:copy-file file target)
         collect target))
 
-(defun build (root &key output)
-  "Build the site rooted at ROOT. Returns the pages that were written.
+(defun build (root &key output drafts)
+  "Build the site rooted at ROOT. Returns the site that was built.
 OUTPUT defaults to _site/ under ROOT, which discovery skips because it is a
-reserved name, so a build never reads its own output."
-  (let* ((root (site-root root))
+reserved name, so a build never reads its own output. DRAFTS includes pages
+carrying :draft:, which is what serve does and what --drafts asks for."
+  (let* ((site (make-site root :drafts drafts))
+         (root (site-root site))
          ;; The output directory is not resolved with the root's TRUENAME,
          ;; since it usually does not exist until the first page is written.
          (output (uiop:ensure-absolute-pathname
                   (uiop:ensure-directory-pathname
                    (or output (merge-pathnames "_site/" root)))
-                  (uiop:getcwd)))
-         (pages (discover-pages root)))
-    (dolist (page pages)
-      (write-page page output nil))
+                  (uiop:getcwd))))
+    (dolist (page (site-pages site))
+      (write-page page output site))
     (copy-assets root output)
-    pages))
+    site))
