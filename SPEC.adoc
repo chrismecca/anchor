@@ -39,6 +39,27 @@ The secondary commitment is thinness. anchor should be readable in an
 afternoon. When a feature can be replaced by a convention, the
 convention wins.
 
+== Scope and freeze
+
+Status: v1
+
+This document defines 1.0. Every section marked v1 ships in 1.0, and
+when the last of them ships, anchor is finished.
+
+Finished means feature-frozen. After 1.0 anchor takes bug fixes and the
+changes required to track cl-adoc's released interface. It does not
+take features. Sections marked later are not promises; promoting one
+requires a new version of this specification, and that should be rare.
+Sections marked non-goal are permanent.
+
+anchor has no privileged consumer. Its author's site uses it on the
+same terms as anyone else's, and no site's requirements get to reopen a
+non-goal.
+
+The freeze is written down rather than held as an intention because a
+written one can be checked. The work remaining is the v1 sections not
+yet built, and anyone can count them.
+
 == Non-goals
 
 Status: non-goal
@@ -140,6 +161,14 @@ restructuring, and removes naming collisions entirely.
 parent-to-child walk as configuration. There is one cascade rule in
 anchor and both things use it.
 
+The walk is the only place anchor resolves a name by searching, and it
+stays. Removing it would mean configuration cascades upward and media
+does not, which is two rules where the document claims one, and a
+written-out relative path is the first thing to break when a bundle
+moves. What the walk owes in exchange is visibility: `check` reports
+what every reference resolved to, so the search can be read rather than
+assumed.
+
 === Reserved names
 
 Any file or directory whose name begins with `_` is reserved and is
@@ -209,6 +238,25 @@ Optional attributes anchor reads: `:tags:`, `:description:`,
 The document title is the AsciiDoc title. There is no `title:` key
 anywhere in configuration or elsewhere.
 
+=== Drafts
+
+A page carrying `:draft:` is a draft. There is no `_drafts/` directory
+and no future-dating rule.
+
+The attribute wins because the document is the metadata. A directory
+would put publication state in the filesystem, where nothing else about
+a page lives, and would withhold a draft's real URL until the moment it
+stopped being a draft. A future `:date:` would make a build depend on
+when it ran, and `:date:` already has a job.
+
+Drafts are excluded from the site graph, not merely from the output. A
+published page linking to a draft is therefore a `missing-reference`
+and the build says so.
+
+`anchor serve` includes drafts. `anchor build` excludes them unless
+given `--drafts`. Reading a draft at the URL it will keep is the point
+of having one.
+
 === Excerpts
 
 The excerpt of a page is its preamble if it has one, otherwise its
@@ -273,6 +321,29 @@ the only escape hatch and exists for exactly that purpose.
 
 Layouts are selected by the `:layout` key and therefore inherit
 through the configuration cascade like everything else.
+
+How a section lists its children is a layout concern and nothing else.
+There is no listing key, no sort key, no children key. A section that
+wants a different index names a different `:layout` in its own
+`_anchor.lisp`, which is already the per-section override because
+`:layout` cascades like the rest. A second mechanism for the same thing
+would be one mechanism too many.
+
+=== Serialisation
+
+The HTML tree is serialised by a function in anchor. anchor does not
+depend on an HTML generator library.
+
+The reason is not line count, which a library would win. It is that
+layouts return data. Head-tag composition is a list of functions
+returning element forms, and a list of forms is something you can
+build, filter, and test. The generators available here are macros that
+emit code at compile time, which is a different shape and does not
+compose that way.
+
+Escaping happens once, in the serialiser, on text that has never been
+part of a markup string. `(:raw ...)` is the documented exception and
+the only one.
 
 === Emitted HTML
 
@@ -347,9 +418,16 @@ none of them is a subsystem.
   (list (output "feed.xml" (render-feed site))))
 ----
 
-Shipped in v1: Atom feed, `sitemap.xml`, `robots.txt`.
+Shipped in v1: Atom feed, `sitemap.xml`, `robots.txt`, and one `/tags/`
+page listing every tag with its pages grouped beneath it.
 
-Shipped later: search index as JSON, redirect map.
+Shipped later: per-tag pages, search index as JSON, redirect map.
+
+One `/tags/` page, not one page per tag. Output filenames are stable,
+so each tag page is a URL owed permanently, including for the tags that
+turn out to be mistakes. A site that wants them before anchor ships
+them writes an emitter. That is what the interface is for, and it is
+why per-tag pages are deferred rather than missing.
 
 Head-tag composition is the same idea applied to `head`: a list of
 functions from page and site to element forms. `title`, `meta
@@ -412,8 +490,10 @@ The policy is bound at the top of the build:
 
 Status: v1
 
-`anchor build`:: Build the site into `_site/`.
-`anchor serve`:: Build, serve `_site/`, rebuild on change.
+`anchor build`:: Build the site into `_site/`. Drafts are excluded
+  unless `--drafts` is given.
+`anchor serve`:: Build, serve `_site/`, rebuild on change. Drafts are
+  included.
 `anchor check`:: Run integrity checks and exit non-zero on failure.
 
 === check
@@ -424,9 +504,11 @@ missing:: Referenced, does not exist.
 orphans:: Exists, referenced by nothing. Reported, never deleted.
 duplicates:: Identical content under different names.
 weight:: Total bytes per page, and the largest assets.
+resolutions:: Every reference and the path it resolved to.
 
 `orphans` and `weight` are the two that matter in year three, and both
-are a walk plus a hash table.
+are a walk plus a hash table. `resolutions` is what keeps the `_media/`
+walk honest.
 
 == Development server
 
@@ -452,23 +534,3 @@ License:: MIT.
 anchor tracks cl-adoc's released interface. It does not depend on
 cl-adoc internals and does not work around cl-adoc bugs; those get
 fixed upstream.
-
-== Open questions
-
-These are unresolved and are recorded rather than answered.
-
-. Should the HTML tree be serialised by a small internal function or
-  by spinneret? Internal keeps the dependency list at one entry and is
-  perhaps a hundred lines. spinneret is better than that hundred lines
-  will be.
-. Should drafts be excluded by attribute (`:draft:`), by directory
-  (`_drafts/`), or by date being in the future? Attribute is simplest;
-  future-dating composes better with scheduling.
-. Does `posts/index.adoc` get to override how its children are listed,
-  or is listing purely a layout concern? The cascade makes the former
-  cheap and the latter cleaner.
-. Should tag pages exist in v1, or is a single `/tags/` page with
-  grouped links enough?
-. Is `_media/` resolution by upward walk too magical? The alternative
-  is requiring an explicit relative path, which is more honest and
-  more annoying.
