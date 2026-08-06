@@ -127,6 +127,23 @@ even though it is not the root page.")
                   (read-output output "posts/2026/first-post/index.html"))
           "And is overridden for everything under posts/.")))
 
+(define-test (build policy)
+  (let ((output (temporary-output)))
+    (unwind-protect
+         (progn
+           (fail (anchor:build (broken-fixture-site) :output output
+                                                     :policy :strict)
+                 'anchor:missing-reference
+                 ":strict aborts, which is what CI wants.")
+           (handler-bind ((warning #'muffle-warning))
+             (anchor:build (broken-fixture-site) :output output
+                                                 :policy :permissive))
+           (true (read-output output "index.html")
+                 ":permissive reports the problem and writes the site anyway,
+which is what --force asks for."))
+      (uiop:delete-directory-tree output :validate t
+                                         :if-does-not-exist :ignore))))
+
 (define-test (build assets)
   (with-built-site (output)
     (true (read-output output "style.css")

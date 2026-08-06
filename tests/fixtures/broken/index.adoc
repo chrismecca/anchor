@@ -1,0 +1,7 @@
+= A Site With A Broken Reference
+:date: 2026-04-01
+
+A separate fixture, because a broken reference in the sample site would
+fail every test that builds it. One page, one bad target.
+
+image::nonexistent.png[Not there]
