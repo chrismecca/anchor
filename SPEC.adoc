@@ -196,14 +196,22 @@ Status: v1
 loaded, evaluated, and merged parent-to-child, so a subdirectory
 overrides its ancestors without any central registry.
 
+Every form in the file is evaluated in order and the value of the last
+one is the configuration, which is a plist.
+
 [source,lisp]
 ----
-(:title      "johndoe"
- :base-url   "https://example.com"
- :author     "John Doe"
- :layout     'my-site:article
- :feed-limit 20)
+(list :title      "johndoe"
+      :base-url   "https://example.com"
+      :author     "John Doe"
+      :layout     'my-site:article
+      :feed-limit 20)
 ----
+
+The file is evaluated rather than read as data so that the forms before
+the last one can do something. Defining the layout function the
+`:layout` key then names is the reason this is a Lisp file and not an
+ini file.
 
 anchor loads and evaluates code from the source tree. The source tree
 is assumed to be yours. anchor is not a sandbox and does not attempt

@@ -31,6 +31,7 @@
    #:site-parent
    #:site-children
    #:site-ancestors
+   #:site-config
 
    ;; Layouts
    #:serialize
@@ -39,8 +40,12 @@
    #:index-row
    #:page-shell
    #:head-tags
+   #:head-title
+   #:site-footer
 
    ;; Conditions
    #:anchor-error
    #:unreadable-document
-   #:unreadable-document-path))
+   #:unreadable-document-path
+   #:unreadable-configuration
+   #:unreadable-configuration-path))

@@ -43,7 +43,8 @@
   (with-built-site (output)
     (let ((html (read-output output "posts/2026/first-post/index.html")))
       (true (search "<!DOCTYPE html>" html))
-      (true (search "<title>The First Post</title>" html))
+      (true (search "<title>The First Post — A Sample Site</title>" html)
+            "The page's title, qualified by the site's from the cascade.")
       (true (search "<h1>The First Post</h1>" html))
       (true (search "<time datetime=\"2026-08-05\">August 5, 2026</time>" html))
       (true (search "name=\"viewport\"" html)
@@ -105,6 +106,26 @@ Every other test passes an absolute path, so nothing else covers this."))
                  "And the front page leads with it, since it is the newest."))
       (uiop:delete-directory-tree output :validate t
                                          :if-does-not-exist :ignore))))
+
+(define-test (build configured-layout)
+  (with-built-site (output)
+    (let ((archive (read-output output "archive/index.html"))
+          (about (read-output output "about/index.html")))
+      (true (search "<a href=\"/posts/2026/first-post/\">" archive)
+            "archive/ names :layout in its own _anchor.lisp and gets an index
+even though it is not the root page.")
+      (false (search "<a href=\"/posts/2026/first-post/\">" about)
+             "about/ names none and gets the article layout."))))
+
+(define-test (build footer)
+  (with-built-site (output)
+    (true (search "<footer>
+<p>A Person</p>" (read-output output "about/index.html"))
+          "The author comes from the root configuration.")
+    (true (search "<footer>
+<p>Someone Else</p>"
+                  (read-output output "posts/2026/first-post/index.html"))
+          "And is overridden for everything under posts/.")))
 
 (define-test (build assets)
   (with-built-site (output)

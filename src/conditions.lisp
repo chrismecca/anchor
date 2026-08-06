@@ -21,3 +21,12 @@
                      (unreadable-document-path condition)
                      (unreadable-document-cause condition))))
   (:documentation "cl-adoc could not parse a document."))
+
+(define-condition unreadable-configuration (anchor-error)
+  ((path :initarg :path :reader unreadable-configuration-path)
+   (cause :initarg :cause :reader unreadable-configuration-cause))
+  (:report (lambda (condition stream)
+             (format stream "Could not evaluate ~a: ~a"
+                     (unreadable-configuration-path condition)
+                     (unreadable-configuration-cause condition))))
+  (:documentation "An _anchor.lisp did not read or would not evaluate."))

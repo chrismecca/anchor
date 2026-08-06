@@ -41,7 +41,7 @@ nearest page-ancestor is posts/.")
     (is equal '("/posts/2026/first-post/" "/posts/2026/second-post/")
         (mapcar #'anchor:page-url (anchor:site-children site posts))
         "Children come back in date order, newest first.")
-    (is equal '("/posts/" "/about/")
+    (is equal '("/posts/" "/about/" "/archive/")
         (mapcar #'anchor:page-url (anchor:site-children site root))
         "Dated children first, then undated ones in the order found.")))
 

@@ -19,11 +19,15 @@ the root page becomes \"index.html\"."
 
 (defun page-layout (page site)
   "The layout function for PAGE.
-The root page gets the front page and every other page gets the article.
-This is provisional: layouts are chosen by the :layout key once the
-configuration cascade exists, and this rule goes away when it does."
-  (declare (ignore site))
-  (if (string= (page-url page) "/") #'front-page #'article))
+The :layout key from the cascade when there is one, named either as a symbol
+or as a function. Otherwise the root page gets the front page and everything
+else the article, so that a site with no _anchor.lisp at all still produces
+an index rather than nothing to click."
+  (let ((configured (getf (site-config site page) :layout)))
+    (cond ((functionp configured) configured)
+          (configured (fdefinition configured))
+          ((string= (page-url page) "/") #'front-page)
+          (t #'article))))
 
 (defun render-page (page site)
   "PAGE as a complete HTML document."

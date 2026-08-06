@@ -14,17 +14,28 @@
 
 (in-package #:anchor)
 
+(defun head-title (page site)
+  "The text of PAGE's title element.
+The page's own title, qualified by the site's when the two differ. The root
+page is usually named after the site, and repeating that name twice in a
+browser tab helps nobody."
+  (let ((page-title (page-title page))
+        (site-title (getf (site-config site page) :title)))
+    (cond ((null site-title) page-title)
+          ((null page-title) site-title)
+          ((string= page-title site-title) page-title)
+          (t (format nil "~a — ~a" page-title site-title)))))
+
 (defun head-tags (page site)
   "The contents of PAGE's head, as a list of element forms.
 A list rather than a block of markup so that a site can replace or extend it
 by building a different list."
-  (declare (ignore site))
   (list '(:meta :charset "utf-8")
         '(:meta :name "viewport" :content "width=device-width, initial-scale=1")
         ;; Light and dark are the stylesheet's business. anchor states that
         ;; the page supports both and ships no toggle and no JavaScript.
         '(:meta :name "color-scheme" :content "light dark")
-        `(:title ,(page-title page))
+        `(:title ,(head-title page site))
         '(:link :rel "stylesheet" :href "/style.css")))
 
 (defun article (page site)
@@ -72,8 +83,16 @@ produce duplicate element ids. An excerpt cannot."
       ,(when remaining
          `(:nav (:ul ,@(mapcar #'index-row remaining)))))))
 
+(defun site-footer (page site)
+  "The site footer, or NIL when there is nothing to put in one.
+This is where the author goes. A byline on every article is noise on a
+single-author site, and the date is what a reader needs there instead."
+  (let ((author (getf (site-config site page) :author)))
+    (when author
+      `(:footer (:p ,author)))))
+
 (defun page-shell (page site body)
   "The whole document around BODY."
   `(:html :lang "en"
           (:head ,@(head-tags page site))
-          (:body ,body)))
+          (:body ,body ,(site-footer page site))))

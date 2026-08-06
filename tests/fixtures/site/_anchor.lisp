@@ -1,5 +1,8 @@
-;;;; Configuration is not read yet. This file is here so that discovery is
-;;;; tested against a reserved name it has to skip.
+;;;; Configuration for the whole sample site.
+;;;;
+;;;; Every form is evaluated and the value of the last one is the plist, so
+;;;; the configuration is built with LIST rather than written as a literal.
 
-(:title "A Sample Site"
- :base-url "https://example.com")
+(list :title    "A Sample Site"
+      :author   "A Person"
+      :base-url "https://example.com")

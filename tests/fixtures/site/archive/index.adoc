@@ -1,0 +1,5 @@
+= Archive
+
+A page whose layout is chosen by configuration rather than by its position
+in the tree. Its `_anchor.lisp` names one, so it renders as an index even
+though it is not the root.

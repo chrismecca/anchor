@@ -18,7 +18,8 @@
   pages
   chronology
   pages-by-url
-  children-by-url)
+  children-by-url
+  configs)
 
 (defun parent-url (url)
   "The URL one level above URL, or NIL at the root."
@@ -52,6 +53,14 @@ document of its own."
   "The pages whose nearest page-ancestor is PAGE, most recent first."
   (gethash (page-url page) (site-children-by-url site)))
 
+(defun site-config (site page)
+  "The configuration in force for PAGE: its own directory's, cascaded.
+A NIL site has no configuration, so a layout can be called with one during
+development without special-casing the call."
+  (when site
+    (gethash (namestring (uiop:pathname-directory-pathname (page-source page)))
+             (site-configs site))))
+
 (defun site-ancestors (site page)
   "PAGE's ancestors, nearest first."
   (loop for parent = (site-parent site page) then (site-parent site parent)
@@ -75,7 +84,8 @@ one rather than quietly producing a dead link."
                             :pages pages
                             :chronology (sort-chronologically pages)
                             :pages-by-url pages-by-url
-                            :children-by-url children-by-url)))
+                            :children-by-url children-by-url
+                            :configs (directory-configs root))))
       (dolist (page pages)
         (let ((parent (site-parent site page)))
           (when parent

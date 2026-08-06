@@ -9,7 +9,7 @@
         #'string<))
 
 (define-test (discovery urls)
-  (is equal '("/" "/about/" "/posts/" "/posts/2026/a-draft/"
+  (is equal '("/" "/about/" "/archive/" "/posts/" "/posts/2026/a-draft/"
               "/posts/2026/first-post/" "/posts/2026/second-post/")
       (urls)
       "Directory structure is URL structure, and the root index is /.
