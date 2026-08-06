@@ -1,4 +1,4 @@
-:doctitle: anchor
+= anchor
 
 ----
                                   88

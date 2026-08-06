@@ -15,6 +15,7 @@
    #:report-p
    #:report-site
    #:report-missing
+   #:report-undated
    #:report-orphans
    #:report-duplicates
    #:report-weights
@@ -56,6 +57,8 @@
    #:page-date-human
    #:page-draft-p
    #:page-tags
+   #:page-description
+   #:page-uses-stem-p
    #:page-body-html
    #:page-excerpt-html
 
@@ -112,6 +115,16 @@
    #:page-shell
    #:head-tags
    #:head-title
+   #:*head-tags*
+   #:head-charset
+   #:head-viewport
+   #:head-color-scheme
+   #:head-title-tag
+   #:head-description
+   #:head-canonical
+   #:head-open-graph
+   #:head-twitter
+   #:head-stylesheet
    #:site-footer
 
    ;; Conditions
@@ -125,4 +138,6 @@
    #:missing-reference
    #:missing-reference-url
    #:missing-reference-target
-   #:missing-reference-reference))
+   #:missing-reference-reference
+   #:missing-date
+   #:missing-date-url))

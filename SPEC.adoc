@@ -1,5 +1,3 @@
-:doctitle: anchor specification
-
 = anchor: specification
 
 This document describes what anchor is, what it does, and what it
@@ -13,7 +11,12 @@ v1:: Required before the first tagged release.
 later:: Wanted, deferred, spec'd only far enough to keep the door open.
 non-goal:: Will not be built. Listed so the answer is on record.
 
-This file restricts itself to the AsciiDoc subset cl-adoc parses.
+This file restricts itself to the AsciiDoc subset cl-adoc parses, with
+one exception: the description lists it uses throughout. cl-adoc does
+not parse those yet, so anchor cannot render this document today. That
+is being fixed in cl-adoc rather than worked around here, and this
+paragraph loses its second sentence when it lands.
+
 anchor must be able to render its own specification.
 
 == Thesis
@@ -236,9 +239,16 @@ anchor calls into cl-adoc and does not reimplement any part of it.
 
 Required attributes on a page:
 
-`:date:`:: ISO 8601. Absent on a page under a dated section is an
-  error; absent elsewhere means the page is undated and is excluded
-  from chronological listings.
+`:date:`:: ISO 8601. Absent where every other page in the section
+  carries one is a `missing-date` error; absent elsewhere means the
+  page is undated and is excluded from chronological listings.
+
+A dated section is not declared. It is one whose other pages are dated,
+so the evidence comes from the siblings and nothing has to be
+configured for the check to work. A root holding a dated `posts/` and
+an undated `about/` is mixed, and neither is asked for a date. A
+`posts/` where every entry but the newest has one is not mixed, and
+that is exactly the moment a date was forgotten rather than omitted.
 
 Optional attributes anchor reads: `:tags:`, `:description:`,
 `:draft:`.
@@ -274,10 +284,14 @@ no truncation of rendered HTML.
 === Content-derived output
 
 Where a document can answer a question about itself, anchor asks it
-rather than requiring the author to declare it. `document-uses-stem-p`
-determines whether a math renderer is referenced on that page. The
-same principle governs future additions: the document tells the layout
-what it needs.
+rather than requiring the author to declare it. `page-uses-stem-p`
+reports whether a page holds mathematics, and `page-description` gives
+its excerpt as prose when the author has not written a `:description:`.
+
+anchor stops at the answer. It ships no math renderer, because it ships
+no JavaScript, so what a layout does about a page holding mathematics
+is the layout's business. The principle is that the document tells the
+layout what it needs, not that anchor acts on it.
 
 == The site graph
 
@@ -439,9 +453,14 @@ why per-tag pages are deferred rather than missing.
 
 Head-tag composition is the same idea applied to `head`: a list of
 functions from page and site to element forms. `title`, `meta
-description` from the document's excerpt, canonical link, and Open
-Graph and Twitter card tags are members of that list and can be
-replaced wholesale.
+description` from the page's `:description:` or else its excerpt,
+canonical link, and Open Graph and Twitter card tags are members of
+that list and can be replaced wholesale.
+
+The canonical link and the Open Graph tags are absent from a site with
+no `:base-url`, on the same grounds as the feed: every useful member of
+them is an absolute URL, and a card built on relative ones is worse
+than no card.
 
 That list plus the emitter list is the entirety of anchor's answer to
 search-engine and social-preview concerns. There is no SEO feature.
@@ -479,12 +498,18 @@ collected into a list of strings.
 Conditions:
 
 `missing-reference`:: A link or image target that does not exist.
-`duplicate-slug`:: Two pages resolving to one URL.
-`unreadable-document`:: cl-adoc could not parse the file.
 `missing-date`:: A page requiring a date does not have one.
+`unreadable-document`:: cl-adoc could not parse a page.
+`unreadable-configuration`:: An `_anchor.lisp` did not read, or would
+  not evaluate.
+`usage-error`:: The command line was not something anchor understands.
 
-Restarts offered where meaningful: `skip-page`, `use-placeholder`,
-`continue`.
+Restarts offered where meaningful: `skip-page` around each page as it
+is read, and `continue` around each problem the build reports.
+
+Two pages resolving to one URL has no condition because it cannot
+happen. A URL is a directory's path and two directories cannot share
+one, so the filesystem rules it out rather than a check.
 
 The policy is bound at the top of the build:
 

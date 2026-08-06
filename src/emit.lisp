@@ -18,16 +18,6 @@
   path
   content)
 
-(defun base-url (site)
-  "The site's :base-url with any trailing slash removed, or NIL."
-  (let ((base (getf (site-root-config site) :base-url)))
-    (when base (string-right-trim "/" base))))
-
-(defun absolute-url (site url)
-  "URL made absolute against the site's base, or NIL when there is no base."
-  (let ((base (base-url site)))
-    (when base (concatenate 'string base url))))
-
 (defun feed-timestamp (date)
   "DATE as the date-time Atom requires.
 A page carries a date and not a time. Midnight UTC is the reading of that

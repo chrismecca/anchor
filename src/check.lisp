@@ -121,6 +121,7 @@ unused."
   "What check found."
   site
   missing
+  undated
   orphans
   duplicates
   weights)
@@ -132,15 +133,18 @@ than rendered."
   (let ((site (make-site root :drafts drafts)))
     (%make-report :site site
                   :missing (missing-references site)
+                  :undated (undated-in-dated-section site)
                   :orphans (orphan-files site)
                   :duplicates (duplicate-groups (checkable-files (site-root site)))
                   :weights (page-weights site))))
 
 (defun report-passed-p (report)
   "Whether REPORT found anything that makes a site wrong.
-Only missing references do. An orphan and a duplicate are both things a
-person might have meant, so they are reported and count for nothing."
-  (null (report-missing report)))
+A broken reference and a forgotten date do. An orphan and a duplicate are
+both things a person might have meant, so they are reported and count for
+nothing."
+  (and (null (report-missing report))
+       (null (report-undated report))))
 
 (defun relative-name (site path)
   (namestring (uiop:enough-pathname path (site-root site))))
@@ -154,6 +158,13 @@ person might have meant, so they are reported and count for nothing."
           (format stream "  ~a references ~s~%"
                   (page-url (reference-page reference))
                   (reference-target reference)))
+        (format stream "  none~%"))
+
+    (format stream "~&~%undated~%")
+    (if (report-undated report)
+        (dolist (page (report-undated report))
+          (format stream "  ~a, where every other page in the section is dated~%"
+                  (page-url page)))
         (format stream "  none~%"))
 
     (format stream "~&~%orphans~%")

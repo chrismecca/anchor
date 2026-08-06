@@ -26,17 +26,99 @@ browser tab helps nobody."
           ((string= page-title site-title) page-title)
           (t (format nil "~a — ~a" page-title site-title)))))
 
+;;; Head tags
+;;;
+;;; A list of functions of a page and a site, each returning a form, a list of
+;;; forms, or NIL. The same shape as the emitter list and for the same reason:
+;;; a list is something a site can add to, filter, or replace outright, and
+;;; none of the members has to know about any other.
+;;;
+;;; This list and the emitter list are the whole of anchor's answer to search
+;;; engines and social previews. There is no SEO feature behind them.
+
+(defun head-charset (page site)
+  (declare (ignore page site))
+  '(:meta :charset "utf-8"))
+
+(defun head-viewport (page site)
+  (declare (ignore page site))
+  '(:meta :name "viewport" :content "width=device-width, initial-scale=1"))
+
+(defun head-color-scheme (page site)
+  "Light and dark are the stylesheet's business.
+anchor says the page supports both and ships no toggle and no JavaScript."
+  (declare (ignore page site))
+  '(:meta :name "color-scheme" :content "light dark"))
+
+(defun head-title-tag (page site)
+  `(:title ,(head-title page site)))
+
+(defun head-description (page site)
+  (declare (ignore site))
+  (let ((description (page-description page)))
+    (when description
+      `(:meta :name "description" :content ,description))))
+
+(defun head-canonical (page site)
+  (let ((url (absolute-url site (page-url page))))
+    (when url `(:link :rel "canonical" :href ,url))))
+
+(defun head-open-graph (page site)
+  "Open Graph, which is what a link to this page looks like elsewhere.
+Absent entirely without a :base-url, since every useful member of it is an
+absolute URL and a card built on relative ones is worse than no card."
+  (let ((url (absolute-url site (page-url page))))
+    (when url
+      (let ((description (page-description page))
+            (site-title (getf (site-config site page) :title)))
+        (remove nil
+                (list `(:meta :property "og:type"
+                              :content ,(if (site-children site page)
+                                            "website"
+                                            "article"))
+                      `(:meta :property "og:title" :content ,(page-title page))
+                      `(:meta :property "og:url" :content ,url)
+                      (when site-title
+                        `(:meta :property "og:site_name" :content ,site-title))
+                      (when description
+                        `(:meta :property "og:description" :content ,description))
+                      (when (page-date page)
+                        `(:meta :property "article:published_time"
+                                :content ,(page-date page)))))))))
+
+(defun head-twitter (page site)
+  "A summary card. anchor knows of no image to promote it to a larger one."
+  (declare (ignore site))
+  (let ((description (page-description page)))
+    (remove nil
+            (list '(:meta :name "twitter:card" :content "summary")
+                  `(:meta :name "twitter:title" :content ,(page-title page))
+                  (when description
+                    `(:meta :name "twitter:description" :content ,description))))))
+
+(defun head-stylesheet (page site)
+  (declare (ignore page site))
+  '(:link :rel "stylesheet" :href "/style.css"))
+
+(defparameter *head-tags*
+  (list #'head-charset
+        #'head-viewport
+        #'head-color-scheme
+        #'head-title-tag
+        #'head-description
+        #'head-canonical
+        #'head-open-graph
+        #'head-twitter
+        #'head-stylesheet)
+  "The functions that build a page's head, in order.
+Replace the list to replace the head, or remove a member to drop what it
+contributes.")
+
 (defun head-tags (page site)
-  "The contents of PAGE's head, as a list of element forms.
-A list rather than a block of markup so that a site can replace or extend it
-by building a different list."
-  (list '(:meta :charset "utf-8")
-        '(:meta :name "viewport" :content "width=device-width, initial-scale=1")
-        ;; Light and dark are the stylesheet's business. anchor states that
-        ;; the page supports both and ships no toggle and no JavaScript.
-        '(:meta :name "color-scheme" :content "light dark")
-        `(:title ,(head-title page site))
-        '(:link :rel "stylesheet" :href "/style.css")))
+  "The contents of PAGE's head, as a list of element forms."
+  (loop for tag in *head-tags*
+        for form = (funcall tag page site)
+        when form collect form))
 
 (defun article (page site)
   "PAGE as an article: title, date, body, in that order."
