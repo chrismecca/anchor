@@ -70,6 +70,18 @@ document of its own."
   "The configuration at the root, which is what applies to a generated page."
   (gethash (namestring (site-root site)) (site-configs site)))
 
+(defun base-url (site)
+  "The site's :base-url with any trailing slash removed, or NIL.
+Here rather than with the emitters because the head tags need it too: a
+canonical link and an Open Graph URL are as absolute as a feed's entry ids."
+  (let ((base (getf (site-root-config site) :base-url)))
+    (when base (string-right-trim "/" base))))
+
+(defun absolute-url (site url)
+  "URL made absolute against the site's base, or NIL when there is no base."
+  (let ((base (base-url site)))
+    (when base (concatenate 'string base url))))
+
 (defun site-config (site page)
   "The configuration in force for PAGE: its own directory's, cascaded.
 A NIL site has no configuration, so a layout can be called with one during
@@ -77,6 +89,25 @@ development without special-casing the call."
   (when site
     (gethash (namestring (uiop:pathname-directory-pathname (page-source page)))
              (site-configs site))))
+
+(defun undated-in-dated-section (site)
+  "Pages that ought to carry a date and do not.
+
+A page needs one when every other page in its section has one. That is what
+a dated section is: the evidence comes from the siblings rather than from a
+declaration, so nothing has to be configured for the check to work and
+nothing fires until there is a pattern to break.
+
+It stays quiet where a site is genuinely mixed. A root holding a dated
+posts/ and an undated about/ is not a dated section, so about/ is not asked
+for a date. A posts/ where every entry but the newest carries one is, which
+is exactly the moment the date was forgotten."
+  (loop for page in (site-pages site)
+        for parent = (site-parent site page)
+        when (and (null (page-date page)) parent)
+          append (let ((siblings (remove page (site-children site parent))))
+                   (when (and siblings (every #'page-date siblings))
+                     (list page)))))
 
 (defun site-ancestors (site page)
   "PAGE's ancestors, nearest first."

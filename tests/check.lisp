@@ -27,6 +27,20 @@
     (is string= "nonexistent.png"
         (anchor::reference-target (first (anchor:report-missing report))))))
 
+(define-test (check undated)
+  (let ((sound (checked))
+        (forgotten (anchor:check (undated-fixture-site))))
+    (is equal '() (anchor:report-undated sound)
+        "A root holding a dated posts/ and an undated about/ is not a dated
+section, so nothing there is asked for a date.")
+    (is = 1 (length (anchor:report-undated forgotten)))
+    (is string= "/posts/three/"
+        (anchor:page-url (first (anchor:report-undated forgotten)))
+        "Every other page in that section is dated, which is the moment a
+forgotten date is visible.")
+    (false (anchor:report-passed-p forgotten)
+           "A forgotten date makes a site wrong, the same as a broken link.")))
+
 (define-test (check orphans)
   (let* ((report (checked))
          (names (relative-names (anchor:report-site report)

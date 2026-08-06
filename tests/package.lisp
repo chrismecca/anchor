@@ -15,3 +15,7 @@
 Separate from the sample site, since a broken reference there would fail
 every test that builds it."
   (asdf:system-relative-pathname :anchor "tests/fixtures/broken/"))
+
+(defun undated-fixture-site ()
+  "A site where one page in a dated section has no date."
+  (asdf:system-relative-pathname :anchor "tests/fixtures/undated/"))

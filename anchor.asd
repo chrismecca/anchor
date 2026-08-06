@@ -43,6 +43,7 @@
                              (:file "discovery")
                              (:file "site")
                              (:file "config")
+                             (:file "head")
                              (:file "emit")
                              (:file "reference")
                              (:file "build")

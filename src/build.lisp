@@ -76,6 +76,11 @@ problem, and *POLICY* is what decides how much of one."
                      :url (page-url (reference-page reference))
                      :target (reference-target reference)))))
 
+(defun report-missing-dates (site)
+  "Raise a MISSING-DATE for each page in SITE that ought to carry one."
+  (dolist (page (undated-in-dated-section site))
+    (report-problem (make-condition 'missing-date :url (page-url page)))))
+
 (defun write-output (file output)
   "Write an emitter's FILE into OUTPUT and return the path written."
   (let ((path (merge-pathnames (output-path file) output)))
@@ -141,6 +146,7 @@ is bound for the whole build, so one setting governs every problem it hits."
                    (or output (merge-pathnames "_site/" root)))
                   (uiop:getcwd))))
     (report-missing-references site)
+    (report-missing-dates site)
     (dolist (page (site-pages site))
       (write-page page output site))
     (dolist (file (emit site))

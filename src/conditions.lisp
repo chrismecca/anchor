@@ -31,6 +31,14 @@
                      (unreadable-configuration-cause condition))))
   (:documentation "An _anchor.lisp did not read or would not evaluate."))
 
+(define-condition missing-date (anchor-error)
+  ((url :initarg :url :reader missing-date-url))
+  (:report (lambda (condition stream)
+             (format stream "~a has no :date:, and every other page in its ~
+                             section has one."
+                     (missing-date-url condition))))
+  (:documentation "A page that needs a date does not have one."))
+
 (define-condition usage-error (anchor-error)
   ((message :initarg :message :reader usage-error-message))
   (:report (lambda (condition stream)

@@ -1,0 +1,4 @@
+= Three
+
+Every other page in this section is dated, so the date here was
+forgotten rather than omitted on purpose.

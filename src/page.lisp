@@ -139,11 +139,56 @@ here instead."
         until (adoc:heading-p block)
         collect block))
 
+(defun page-uses-stem-p (page)
+  "Whether PAGE contains mathematics.
+Asked of the document rather than declared by the author, which is the rule
+for anything a document can answer about itself. What a layout does with the
+answer is the layout's business: anchor ships no math renderer, because it
+ships no JavaScript."
+  (adoc:document-uses-stem-p (page-document page)))
+
+(defun collapse-whitespace (string)
+  "STRING with every run of whitespace reduced to one space, and trimmed."
+  (string-trim " "
+               (with-output-to-string (out)
+                 (let ((pending nil)
+                       (started nil))
+                   (loop for character across string
+                         do (if (member character
+                                        '(#\Space #\Tab #\Newline #\Return))
+                                (setf pending started)
+                                (progn
+                                  (when pending (write-char #\Space out))
+                                  (setf pending nil started t)
+                                  (write-char character out))))))))
+
+(defun truncate-text (string limit)
+  "STRING cut to LIMIT characters at a word boundary."
+  (if (<= (length string) limit)
+      string
+      (let ((space (position #\Space string :from-end t :end limit)))
+        (concatenate 'string (subseq string 0 (or space limit)) "…"))))
+
+(defun page-description (page)
+  "The prose that describes PAGE.
+Its `:description:` when the document gives one, and otherwise its excerpt as
+text. The document is the metadata here as everywhere: an author who has said
+what a page is about is believed, and one who has not gets what they wrote."
+  (or (adoc:document-attribute (page-document page) "description")
+      (let ((text (collapse-whitespace
+                   (format nil "~{~a~^ ~}"
+                           (mapcar #'adoc:node-text (page-excerpt-blocks page))))))
+        (when (plusp (length text))
+          (truncate-text text 200)))))
+
+(defun page-excerpt-blocks (page)
+  "The blocks PAGE's excerpt is made of."
+  (or (page-preamble page)
+      (let ((paragraph (adoc:find-node #'adoc:paragraph-p (page-document page))))
+        (and paragraph (list paragraph)))))
+
 (defun page-excerpt-html (page)
   "PAGE's preamble as HTML, or its first paragraph when it has no preamble.
 This is a subtree of the parsed document rendered on its own. There is no
 marker in the source, no attribute, and nothing truncates rendered HTML."
-  (render-blocks
-   (or (page-preamble page)
-       (let ((paragraph (adoc:find-node #'adoc:paragraph-p (page-document page))))
-         (and paragraph (list paragraph))))))
+  (render-blocks (page-excerpt-blocks page)))
