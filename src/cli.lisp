@@ -1,8 +1,6 @@
 ;;;; The command line.
 ;;;;
-;;;; Two commands, because two are built. serve arrives with the development
-;;;; server; listing it here before then would be the same kind of claim the
-;;;; code does not back that this project keeps taking out of its own spec.
+;;;; The three commands the spec names, and nothing else.
 ;;;;
 ;;;; The option parser is twenty lines and has no dependency behind it. anchor
 ;;;; takes a directory, three flags and a path, and a library for that would
@@ -25,16 +23,18 @@
 
 usage:
   anchor build [DIR] [--output DIR] [--drafts] [--force]
+  anchor serve [DIR] [--output DIR] [--port N]
   anchor check [DIR] [--drafts]
 
   DIR is the source directory and defaults to the current one.
 
 options:
   --output DIR  Write the site to DIR instead of to DIR/_site/.
+  --port N      Serve on N instead of 4000.
   --drafts      Include pages carrying :draft:.
   --force       Report problems and carry on rather than stopping.
 
-anchor serve is specified but not built yet.
+serve includes drafts and rebuilds when the source changes.
 ")
 
 (defun parse-options (arguments)
@@ -51,6 +51,15 @@ anchor serve is specified but not built yet.
                   (unless value
                     (error 'usage-error :message "--output needs a directory"))
                   (setf (getf options :output) value)))
+               ((string= argument "--port")
+                (let ((value (pop arguments)))
+                  (unless value
+                    (error 'usage-error :message "--port needs a number"))
+                  (setf (getf options :port)
+                        (or (parse-integer value :junk-allowed t)
+                            (error 'usage-error
+                                   :message (format nil "--port wants a number, not ~a"
+                                                    value))))))
                ((and (> (length argument) 2) (string= "--" argument :end2 2))
                 (error 'usage-error
                        :message (format nil "unknown option ~a" argument)))
@@ -70,6 +79,14 @@ only mean stopping."
                   :drafts (getf options :drafts)
                   :policy (option-policy options))
     (format t "~&built ~d page~:p into ~a~%" (length (site-pages site)) output)
+    0))
+
+(defun command-serve (root options)
+  (let ((server (serve root :port (or (getf options :port) 4000)
+                            :output (getf options :output))))
+    (format t "~&serving ~a on http://127.0.0.1:~d/~%"
+            (server-output server) (server-port server))
+    (wait server)
     0))
 
 (defun command-check (root options)
@@ -96,6 +113,7 @@ only mean stopping."
              (let ((root (or (first positional) ".")))
                (cond
                  ((string= command "build") (command-build root options))
+                 ((string= command "serve") (command-serve root options))
                  ((string= command "check") (command-check root options))
                  (t (error 'usage-error
                            :message (format nil "unknown command ~a"

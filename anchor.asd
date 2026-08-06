@@ -6,7 +6,9 @@
   :license "MIT"
   :version "0.0.1"
   :homepage "https://github.com/chrismecca/anchor"
-  :depends-on ("cl-adoc")
+  ;; sb-bsd-sockets is an SBCL contrib rather than a dependency to fetch. The
+  ;; development server is the only thing that uses it.
+  :depends-on ("cl-adoc" (:require "sb-bsd-sockets"))
   :build-operation "program-op"
   :build-pathname "anchor"
   :entry-point "anchor:main"
@@ -25,6 +27,7 @@
                              (:file "emit")
                              (:file "build")
                              (:file "check")
+                             (:file "serve")
                              (:file "cli"))))
   :in-order-to ((test-op (test-op "anchor/tests"))))
 
@@ -45,5 +48,6 @@
                              (:file "build")
                              (:file "check")
                              (:file "xml")
-                             (:file "cli"))))
+                             (:file "cli")
+                             (:file "serve"))))
   :perform (test-op (op c) (uiop:symbol-call :parachute :test :anchor/tests)))
