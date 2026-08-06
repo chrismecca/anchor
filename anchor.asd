@@ -20,7 +20,8 @@
                              (:file "graph")
                              (:file "layout")
                              (:file "emit")
-                             (:file "build"))))
+                             (:file "build")
+                             (:file "check"))))
   :in-order-to ((test-op (test-op "anchor/tests"))))
 
 (defsystem "anchor/tests"
@@ -38,5 +39,6 @@
                              (:file "emit")
                              (:file "reference")
                              (:file "build")
+                             (:file "check")
                              (:file "xml"))))
   :perform (test-op (op c) (uiop:symbol-call :parachute :test :anchor/tests)))

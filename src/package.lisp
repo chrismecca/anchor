@@ -6,6 +6,24 @@
    ;; Building
    #:build
    #:discover-pages
+   #:*policy*
+
+   ;; Checking
+   #:check
+   #:print-report
+   #:report
+   #:report-p
+   #:report-site
+   #:report-missing
+   #:report-orphans
+   #:report-duplicates
+   #:report-weights
+   #:report-passed-p
+   #:page-weight
+   #:page-weight-page
+   #:page-weight-html
+   #:page-weight-assets
+   #:page-weight-total
 
    ;; Pages
    #:page

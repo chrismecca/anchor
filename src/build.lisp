@@ -44,17 +44,37 @@ an index rather than nothing to click."
       (write-string (render-page page site) stream))
     path))
 
+(defparameter *policy* :interactive
+  "What a build does about a problem.
+
+:strict:: Any condition aborts. This is what CI wants.
+:permissive:: Report it and carry on. This is what --force asks for.
+:interactive:: Signal it with a restart established, so a REPL stops at the
+  offending page with the state still live and a person decides. From a
+  script, where there is no debugger, this aborts like :strict.
+
+:interactive is the default because it is the reason anchor is written in
+Lisp rather than something else.")
+
+(defun report-problem (condition)
+  "Raise CONDITION according to *POLICY*."
+  (ecase *policy*
+    (:strict (error condition))
+    (:permissive (warn "~a" condition))
+    (:interactive
+     (with-simple-restart (continue "Leave it as written and go on.")
+       (error condition)))))
+
 (defun report-missing-references (site)
-  "Signal a MISSING-REFERENCE for each target in SITE that resolved to nothing.
-Resolution only classifies; this is where a broken reference becomes a
-problem. Each one offers a CONTINUE restart, so a build from a REPL can look
-at the page and carry on, and a build from a script stops."
+  "Raise a MISSING-REFERENCE for each target in SITE that resolved to nothing.
+Resolution only classifies. This is where a broken reference becomes a
+problem, and *POLICY* is what decides how much of one."
   (dolist (reference (missing-references site))
-    (with-simple-restart (continue "Leave the reference as written and go on.")
-      (error 'missing-reference
-             :reference reference
-             :url (page-url (reference-page reference))
-             :target (reference-target reference)))))
+    (report-problem
+     (make-condition 'missing-reference
+                     :reference reference
+                     :url (page-url (reference-page reference))
+                     :target (reference-target reference)))))
 
 (defun write-output (file output)
   "Write an emitter's FILE into OUTPUT and return the path written."
@@ -105,12 +125,14 @@ so adding a file there costs nothing until a page names it."
              (uiop:copy-file file target)
           collect target)))
 
-(defun build (root &key output drafts)
+(defun build (root &key output drafts (policy *policy*))
   "Build the site rooted at ROOT. Returns the site that was built.
 OUTPUT defaults to _site/ under ROOT, which discovery skips because it is a
 reserved name, so a build never reads its own output. DRAFTS includes pages
-carrying :draft:, which is what serve does and what --drafts asks for."
-  (let* ((site (make-site root :drafts drafts))
+carrying :draft:, which is what serve does and what --drafts asks for. POLICY
+is bound for the whole build, so one setting governs every problem it hits."
+  (let* ((*policy* policy)
+         (site (make-site root :drafts drafts))
          (root (site-root site))
          ;; The output directory is not resolved with the root's TRUENAME,
          ;; since it usually does not exist until the first page is written.
