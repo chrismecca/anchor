@@ -17,6 +17,7 @@
    #:page-date
    #:page-date-human
    #:page-draft-p
+   #:page-tags
    #:page-body-html
    #:page-excerpt-html
 
@@ -32,9 +33,28 @@
    #:site-children
    #:site-ancestors
    #:site-config
+   #:site-root-config
+   #:site-tags
+   #:site-tagged
+
+   ;; Emitters
+   #:output
+   #:output-p
+   #:output-path
+   #:output-content
+   #:*emitters*
+   #:emit
+   #:atom-feed
+   #:sitemap
+   #:robots-txt
+   #:tags-page
+   #:base-url
+   #:absolute-url
 
    ;; Layouts
    #:serialize
+   #:serialize-xml
+   #:render-document
    #:article
    #:front-page
    #:index-row

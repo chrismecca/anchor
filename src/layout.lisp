@@ -96,3 +96,9 @@ single-author site, and the date is what a reader needs there instead."
   `(:html :lang "en"
           (:head ,@(head-tags page site))
           (:body ,body ,(site-footer page site))))
+
+(defun render-document (tree)
+  "TREE as a complete HTML document, doctype and all."
+  (with-output-to-string (out)
+    (write-line "<!DOCTYPE html>" out)
+    (serialize tree out)))

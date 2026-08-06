@@ -4,9 +4,9 @@
 ;;;; rendered, because a page cannot be laid out until the questions it asks
 ;;;; about its neighbours can be answered.
 ;;;;
-;;;; The relations here are the ones something currently renders: chronology
-;;;; and sections. Taxonomy arrives with the /tags/ page and the reference
-;;;; relation arrives with check, for the same reason conditions.lisp holds
+;;;; The relations here are the ones something renders: chronology, sections,
+;;;; and taxonomy now that there is a /tags/ page to consume it. The reference
+;;;; relation still waits for check, for the same reason conditions.lisp holds
 ;;;; only the conditions the build can signal. A graph that answers questions
 ;;;; nobody asks is a claim the code does not back.
 
@@ -19,6 +19,7 @@
   chronology
   pages-by-url
   children-by-url
+  pages-by-tag
   configs)
 
 (defun parent-url (url)
@@ -53,6 +54,20 @@ document of its own."
   "The pages whose nearest page-ancestor is PAGE, most recent first."
   (gethash (page-url page) (site-children-by-url site)))
 
+(defun site-tags (site)
+  "Every tag in use, alphabetically."
+  (sort (loop for tag being the hash-keys of (site-pages-by-tag site)
+              collect tag)
+        #'string-lessp))
+
+(defun site-tagged (site tag)
+  "The pages carrying TAG, most recent first."
+  (gethash tag (site-pages-by-tag site)))
+
+(defun site-root-config (site)
+  "The configuration at the root, which is what applies to a generated page."
+  (gethash (namestring (site-root site)) (site-configs site)))
+
 (defun site-config (site page)
   "The configuration in force for PAGE: its own directory's, cascaded.
 A NIL site has no configuration, so a layout can be called with one during
@@ -77,14 +92,24 @@ one rather than quietly producing a dead link."
                     (discover-pages root)
                     (remove-if #'page-draft-p (discover-pages root))))
          (pages-by-url (make-hash-table :test #'equal))
-         (children-by-url (make-hash-table :test #'equal)))
+         (children-by-url (make-hash-table :test #'equal))
+         (pages-by-tag (make-hash-table :test #'equal)))
     (dolist (page pages)
-      (setf (gethash (page-url page) pages-by-url) page))
+      (setf (gethash (page-url page) pages-by-url) page)
+      (dolist (tag (page-tags page))
+        (push page (gethash tag pages-by-tag))))
+    (maphash (lambda (tag tagged)
+               (setf (gethash tag pages-by-tag)
+                     (let ((tagged (nreverse tagged)))
+                       (append (sort-chronologically tagged)
+                               (remove-if #'page-date tagged)))))
+             pages-by-tag)
     (let ((site (%make-site :root root
                             :pages pages
                             :chronology (sort-chronologically pages)
                             :pages-by-url pages-by-url
                             :children-by-url children-by-url
+                            :pages-by-tag pages-by-tag
                             :configs (directory-configs root))))
       (dolist (page pages)
         (let ((parent (site-parent site page)))
