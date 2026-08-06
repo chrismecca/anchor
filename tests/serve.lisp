@@ -1,0 +1,150 @@
+;;;; The development server.
+
+(in-package #:anchor/tests)
+
+(define-test serve)
+
+(defun http-get (port target)
+  "Make one request and return the status line, the headers, and the body."
+  (let ((socket (make-instance 'sb-bsd-sockets:inet-socket
+                               :type :stream :protocol :tcp)))
+    (unwind-protect
+         (progn
+           (sb-bsd-sockets:socket-connect socket #(127 0 0 1) port)
+           (let ((stream (sb-bsd-sockets:socket-make-stream
+                          socket :input t :output t
+                          :element-type '(unsigned-byte 8))))
+             (write-sequence
+              (sb-ext:string-to-octets
+               (format nil "GET ~a HTTP/1.1~c~cHost: localhost~c~c~c~c"
+                       target #\Return #\Newline #\Return #\Newline
+                       #\Return #\Newline)
+               :external-format :utf-8)
+              stream)
+             (finish-output stream)
+             (let ((bytes (make-array 0 :element-type '(unsigned-byte 8)
+                                        :adjustable t :fill-pointer t)))
+               (loop for byte = (read-byte stream nil nil)
+                     while byte do (vector-push-extend byte bytes))
+               (let* ((text (sb-ext:octets-to-string
+                             (coerce bytes '(vector (unsigned-byte 8)))
+                             :external-format :latin-1))
+                      (split (search (format nil "~c~c~c~c"
+                                             #\Return #\Newline
+                                             #\Return #\Newline)
+                                     text))
+                      (head (subseq text 0 split))
+                      (body (subseq text (+ split 4)))
+                      (newline (position #\Newline head)))
+                 (values (string-right-trim '(#\Return) (subseq head 0 newline))
+                         head
+                         body)))))
+      (ignore-errors (sb-bsd-sockets:socket-close socket)))))
+
+(defmacro with-server ((server) &body body)
+  "Serve a throwaway copy of the sample site on a system-chosen port."
+  `(let* ((source (temporary-output))
+          (,server nil))
+     (unwind-protect
+          (progn
+            (uiop:collect-sub*directories (fixture-site) t t (constantly t))
+            ;; A copy, because serving builds into the tree and the fixture
+            ;; is checked in.
+            (copy-tree-to (fixture-site) source)
+            (setf ,server (anchor:serve source :port 0))
+            ,@body)
+       (when ,server (anchor:stop ,server))
+       (uiop:delete-directory-tree source :validate t
+                                          :if-does-not-exist :ignore))))
+
+(defun copy-tree-to (from to)
+  (ensure-directories-exist to)
+  (dolist (file (uiop:directory-files from))
+    (uiop:copy-file file (merge-pathnames (file-namestring file) to)))
+  (dolist (directory (uiop:subdirectories from))
+    (copy-tree-to directory
+                  (merge-pathnames
+                   (concatenate 'string
+                                (car (last (pathname-directory directory)))
+                                "/")
+                   to))))
+
+(define-test (serve pages)
+  (with-server (server)
+    (multiple-value-bind (status head body) (http-get (anchor:server-port server) "/")
+      (true (search "200" status))
+      (true (search "text/html" head))
+      (true (search "<h1>A Sample Site</h1>" body)))
+    (multiple-value-bind (status head body)
+        (http-get (anchor:server-port server) "/posts/2026/first-post/")
+      (declare (ignore head))
+      (true (search "200" status))
+      (true (search "The First Post" body)
+            "A directory is served as the index.html inside it."))))
+
+(define-test (serve assets)
+  (with-server (server)
+    (multiple-value-bind (status head) (http-get (anchor:server-port server) "/style.css")
+      (true (search "200" status))
+      (true (search "text/css" head) "Content type comes from the extension."))
+    (multiple-value-bind (status head)
+        (http-get (anchor:server-port server) "/_media/portrait.svg")
+      (true (search "200" status))
+      (true (search "image/svg+xml" head)))))
+
+(define-test (serve not-found)
+  (with-server (server)
+    (multiple-value-bind (status) (http-get (anchor:server-port server) "/nope.html")
+      (true (search "404" status)))))
+
+(define-test (serve refuses-to-climb-out)
+  (with-server (server)
+    (multiple-value-bind (status)
+        (http-get (anchor:server-port server) "/../../../etc/passwd")
+      (true (search "404" status)
+            "A target that climbs out of the tree is never the request that
+was meant, loopback or not."))))
+
+(define-test (serve no-caching)
+  (with-server (server)
+    (multiple-value-bind (status head) (http-get (anchor:server-port server) "/")
+      (declare (ignore status))
+      (true (search "no-store" head)
+            "A cached response would hide the rebuild that just happened."))))
+
+(define-test (serve includes-drafts)
+  (with-server (server)
+    (multiple-value-bind (status) (http-get (anchor:server-port server)
+                                            "/posts/2026/a-draft/")
+      (true (search "200" status)
+            "serve includes drafts, which is the point of previewing one at
+the URL it will keep."))))
+
+(define-test (serve holds-the-graph)
+  (with-server (server)
+    (true (anchor:server-port server))
+    (true (anchor:page "posts/2026/first-post")
+          "The graph is in the image and answers while the server runs, with
+whatever slashes get typed at a prompt.")
+    (is string= "The First Post" (anchor:page-title
+                                  (anchor:page "/posts/2026/first-post/")))
+    (false (anchor:page "posts/nothing-here"))))
+
+(define-test (serve rebuilds-on-change)
+  (with-server (server)
+    (let ((source (anchor:server-root server)))
+      (multiple-value-bind (status head body)
+          (http-get (anchor:server-port server) "/about/")
+        (declare (ignore status head))
+        (true (search "<h1>About</h1>" body)))
+      ;; Edit the source, then ask again. Nothing watches; the next request
+      ;; notices the file is newer than the build.
+      (sleep 1.1)
+      (with-open-file (out (merge-pathnames "about/index.adoc" source)
+                           :direction :output :if-exists :supersede)
+        (format out "= About, Rewritten~%~%New body.~%"))
+      (multiple-value-bind (status head body)
+          (http-get (anchor:server-port server) "/about/")
+        (declare (ignore status head))
+        (true (search "<h1>About, Rewritten</h1>" body)
+              "The next request rebuilt and served the edit.")))))

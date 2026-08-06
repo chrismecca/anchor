@@ -25,6 +25,20 @@
    #:page-weight-assets
    #:page-weight-total
 
+   ;; Development server
+   #:serve
+   #:stop
+   #:wait
+   #:server
+   #:server-p
+   #:server-port
+   #:server-root
+   #:server-output
+   #:server-thread
+   #:*site*
+   #:rebuild
+   #:rebuild-page
+
    ;; Command line
    #:main
    #:run
