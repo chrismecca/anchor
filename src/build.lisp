@@ -31,10 +31,8 @@ an index rather than nothing to click."
 
 (defun render-page (page site)
   "PAGE as a complete HTML document."
-  (with-output-to-string (out)
-    (write-line "<!DOCTYPE html>" out)
-    (serialize (page-shell page site (funcall (page-layout page site) page site))
-               out)))
+  (render-document
+   (page-shell page site (funcall (page-layout page site) page site))))
 
 (defun write-page (page output &optional site)
   "Write PAGE into OUTPUT and return the path written."
@@ -44,6 +42,16 @@ an index rather than nothing to click."
                                  :if-exists :supersede
                                  :external-format :utf-8)
       (write-string (render-page page site) stream))
+    path))
+
+(defun write-output (file output)
+  "Write an emitter's FILE into OUTPUT and return the path written."
+  (let ((path (merge-pathnames (output-path file) output)))
+    (ensure-directories-exist path)
+    (with-open-file (stream path :direction :output
+                                 :if-exists :supersede
+                                 :external-format :utf-8)
+      (write-string (output-content file) stream))
     path))
 
 (defun asset-files (root)
@@ -81,5 +89,7 @@ carrying :draft:, which is what serve does and what --drafts asks for."
                   (uiop:getcwd))))
     (dolist (page (site-pages site))
       (write-page page output site))
+    (dolist (file (emit site))
+      (write-output file output))
     (copy-assets root output)
     site))

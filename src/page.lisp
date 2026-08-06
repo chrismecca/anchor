@@ -98,6 +98,20 @@ it behind a guess."
              (format nil "~a ~d, ~d" (aref *month-names* (1- month)) day year)))
           date))))
 
+(defun split-list (string)
+  "STRING split on commas, trimmed, with the empty pieces dropped."
+  (loop for start = 0 then (1+ comma)
+        for comma = (position #\, string :start start)
+        for piece = (string-trim '(#\Space #\Tab)
+                                 (subseq string start (or comma (length string))))
+        unless (string= piece "") collect piece
+          while comma))
+
+(defun page-tags (page)
+  "PAGE's tags, in the order the document gives them."
+  (let ((tags (adoc:document-attribute (page-document page) "tags")))
+    (when tags (split-list tags))))
+
 (defun page-draft-p (page)
   "Whether PAGE carries :draft:.
 The attribute's presence is what counts and its value is never read, so

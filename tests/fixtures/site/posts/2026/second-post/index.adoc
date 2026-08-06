@@ -1,5 +1,6 @@
 = The Second Post
 :date: 2026-03-14
+:tags: lisp, testing
 
 Older than the first post, so chronology has something to order. Its
 preamble is these two paragraphs, which is what an excerpt is made of.
