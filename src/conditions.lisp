@@ -30,3 +30,16 @@
                      (unreadable-configuration-path condition)
                      (unreadable-configuration-cause condition))))
   (:documentation "An _anchor.lisp did not read or would not evaluate."))
+
+(define-condition missing-reference (anchor-error)
+  ((url :initarg :url :reader missing-reference-url)
+   (target :initarg :target :reader missing-reference-target)
+   (reference :initarg :reference :reader missing-reference-reference))
+  (:report (lambda (condition stream)
+             (format stream "~a references ~s, which does not exist."
+                     (missing-reference-url condition)
+                     (missing-reference-target condition))))
+  (:documentation "A link or image target that resolved to nothing.
+The page URL and the target are carried on the condition rather than read
+back off the reference, so that this file needs nothing defined after it and
+so that the report reads the same wherever it is printed."))

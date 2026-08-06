@@ -34,15 +34,28 @@ because the form is evaluated rather than read as data."))
   (is equal '(:a 1) (anchor::merge-config '(:a 1) nil))
   (is equal '(:a 1) (anchor::merge-config nil '(:a 1))))
 
-(define-test (config failure)
+(defun with-config-file (text function)
+  "Call FUNCTION on a configuration file containing TEXT, then remove it."
   (let ((path (merge-pathnames "broken-anchor.lisp" (uiop:temporary-directory))))
     (unwind-protect
          (progn
            (with-open-file (out path :direction :output :if-exists :supersede)
-             ;; The form the spec used to show: a literal plist, which is not
-             ;; a call to anything.
-             (write-string "(:title \"unevaluable\")" out))
-           (fail (anchor::load-config path) 'anchor:unreadable-configuration
-                 "A configuration file that will not evaluate is anchor's
-error, not a stray one from the evaluator."))
+             (write-string text out))
+           (funcall function path))
       (uiop:delete-file-if-exists path))))
+
+(define-test (config failure)
+  ;; Both paths end at the same condition: a file that will not read, and one
+  ;; that reads and then will not evaluate. A bare literal plist -- the form
+  ;; the spec used to show -- fails through the second of these, but writing
+  ;; one here would have SBCL compile it and report the undefined function
+  ;; before anchor ever sees the error, which is a diagnostic for a user with
+  ;; a broken file rather than for a test asserting they are caught.
+  (with-config-file "(list :title \"unclosed\""
+    (lambda (path)
+      (fail (anchor::load-config path) 'anchor:unreadable-configuration
+            "A file that will not read is anchor's error.")))
+  (with-config-file "(error \"not a configuration\")"
+    (lambda (path)
+      (fail (anchor::load-config path) 'anchor:unreadable-configuration
+            "And so is one that reads and then will not evaluate."))))

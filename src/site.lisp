@@ -1,14 +1,15 @@
-;;;; The site graph.
+;;;; The site, and the questions it answers.
 ;;;;
-;;;; Built once, after every document is parsed and before anything is
-;;;; rendered, because a page cannot be laid out until the questions it asks
-;;;; about its neighbours can be answered.
+;;;; The graph is built once, after every document is parsed and before
+;;;; anything is rendered, because a page cannot be laid out until the
+;;;; questions it asks about its neighbours can be answered. Building it is in
+;;;; graph.lisp; this file is the type and the reading.
 ;;;;
 ;;;; The relations here are the ones something renders: chronology, sections,
-;;;; and taxonomy now that there is a /tags/ page to consume it. The reference
-;;;; relation still waits for check, for the same reason conditions.lisp holds
-;;;; only the conditions the build can signal. A graph that answers questions
-;;;; nobody asks is a claim the code does not back.
+;;;; and taxonomy now that there is a /tags/ page to consume it. A graph that
+;;;; answers questions nobody asks is a claim the code does not back, which is
+;;;; the same reason conditions.lisp holds only the conditions something can
+;;;; signal.
 
 (in-package #:anchor)
 
@@ -20,7 +21,8 @@
   pages-by-url
   children-by-url
   pages-by-tag
-  configs)
+  configs
+  references)
 
 (defun parent-url (url)
   "The URL one level above URL, or NIL at the root."
@@ -81,46 +83,3 @@ development without special-casing the call."
   (loop for parent = (site-parent site page) then (site-parent site parent)
         while parent
         collect parent))
-
-(defun make-site (root &key drafts)
-  "Parse every page under ROOT and build the graph.
-Drafts are left out of the graph rather than only out of the output, so a
-published page linking to one is a broken reference and will be reported as
-one rather than quietly producing a dead link."
-  (let* ((root (resolve-root root))
-         (pages (if drafts
-                    (discover-pages root)
-                    (remove-if #'page-draft-p (discover-pages root))))
-         (pages-by-url (make-hash-table :test #'equal))
-         (children-by-url (make-hash-table :test #'equal))
-         (pages-by-tag (make-hash-table :test #'equal)))
-    (dolist (page pages)
-      (setf (gethash (page-url page) pages-by-url) page)
-      (dolist (tag (page-tags page))
-        (push page (gethash tag pages-by-tag))))
-    (maphash (lambda (tag tagged)
-               (setf (gethash tag pages-by-tag)
-                     (let ((tagged (nreverse tagged)))
-                       (append (sort-chronologically tagged)
-                               (remove-if #'page-date tagged)))))
-             pages-by-tag)
-    (let ((site (%make-site :root root
-                            :pages pages
-                            :chronology (sort-chronologically pages)
-                            :pages-by-url pages-by-url
-                            :children-by-url children-by-url
-                            :pages-by-tag pages-by-tag
-                            :configs (directory-configs root))))
-      (dolist (page pages)
-        (let ((parent (site-parent site page)))
-          (when parent
-            (push page (gethash (page-url parent) children-by-url)))))
-      ;; Dated children in date order, then the undated ones in the order
-      ;; they were found. A section with no dates still lists predictably.
-      (maphash (lambda (url children)
-                 (let ((children (nreverse children)))
-                   (setf (gethash url children-by-url)
-                         (append (sort-chronologically children)
-                                 (remove-if #'page-date children)))))
-               children-by-url)
-      site)))

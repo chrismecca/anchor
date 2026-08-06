@@ -10,3 +10,10 @@ A second preamble paragraph, before any heading.
 == A heading
 
 Everything from here down is past the preamble and out of the excerpt.
+
+Shared media is found further up the walk, in the root's `_media/`:
+
+image::_media/portrait.svg[A portrait]
+
+A relative link to link:../first-post/[the first post], which resolves
+against this page's own URL.
