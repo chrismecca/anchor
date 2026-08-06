@@ -7,6 +7,9 @@
   :version "0.0.1"
   :homepage "https://github.com/chrismecca/anchor"
   :depends-on ("cl-adoc")
+  :build-operation "program-op"
+  :build-pathname "anchor"
+  :entry-point "anchor:main"
   :serial t
   :components ((:module "src"
                 :components ((:file "package")
@@ -21,7 +24,8 @@
                              (:file "layout")
                              (:file "emit")
                              (:file "build")
-                             (:file "check"))))
+                             (:file "check")
+                             (:file "cli"))))
   :in-order-to ((test-op (test-op "anchor/tests"))))
 
 (defsystem "anchor/tests"
@@ -40,5 +44,6 @@
                              (:file "reference")
                              (:file "build")
                              (:file "check")
-                             (:file "xml"))))
+                             (:file "xml")
+                             (:file "cli"))))
   :perform (test-op (op c) (uiop:symbol-call :parachute :test :anchor/tests)))

@@ -31,6 +31,12 @@
                      (unreadable-configuration-cause condition))))
   (:documentation "An _anchor.lisp did not read or would not evaluate."))
 
+(define-condition usage-error (anchor-error)
+  ((message :initarg :message :reader usage-error-message))
+  (:report (lambda (condition stream)
+             (write-string (usage-error-message condition) stream)))
+  (:documentation "The command line was not something anchor understands."))
+
 (define-condition missing-reference (anchor-error)
   ((url :initarg :url :reader missing-reference-url)
    (target :initarg :target :reader missing-reference-target)

@@ -2,6 +2,9 @@ ocicl/
 
 _site/
 
+# The executable make bin dumps into the project root.
+/anchor
+
 *.fasl
 *.fas
 *.lib

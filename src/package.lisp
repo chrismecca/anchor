@@ -25,6 +25,12 @@
    #:page-weight-assets
    #:page-weight-total
 
+   ;; Command line
+   #:main
+   #:run
+   #:*usage*
+   #:*version*
+
    ;; Pages
    #:page
    #:page-p
@@ -100,6 +106,8 @@
    #:unreadable-document-path
    #:unreadable-configuration
    #:unreadable-configuration-path
+   #:usage-error
+   #:usage-error-message
    #:missing-reference
    #:missing-reference-url
    #:missing-reference-target

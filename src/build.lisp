@@ -126,7 +126,7 @@ so adding a file there costs nothing until a page names it."
           collect target)))
 
 (defun build (root &key output drafts (policy *policy*))
-  "Build the site rooted at ROOT. Returns the site that was built.
+  "Build the site rooted at ROOT. Returns the site, and the directory written.
 OUTPUT defaults to _site/ under ROOT, which discovery skips because it is a
 reserved name, so a build never reads its own output. DRAFTS includes pages
 carrying :draft:, which is what serve does and what --drafts asks for. POLICY
@@ -146,4 +146,4 @@ is bound for the whole build, so one setting governs every problem it hits."
     (dolist (file (emit site))
       (write-output file output))
     (copy-assets site output)
-    site))
+    (values site output)))
