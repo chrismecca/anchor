@@ -44,6 +44,18 @@ an index rather than nothing to click."
       (write-string (render-page page site) stream))
     path))
 
+(defun report-missing-references (site)
+  "Signal a MISSING-REFERENCE for each target in SITE that resolved to nothing.
+Resolution only classifies; this is where a broken reference becomes a
+problem. Each one offers a CONTINUE restart, so a build from a REPL can look
+at the page and carry on, and a build from a script stops."
+  (dolist (reference (missing-references site))
+    (with-simple-restart (continue "Leave the reference as written and go on.")
+      (error 'missing-reference
+             :reference reference
+             :url (page-url (reference-page reference))
+             :target (reference-target reference)))))
+
 (defun write-output (file output)
   "Write an emitter's FILE into OUTPUT and return the path written."
   (let ((path (merge-pathnames (output-path file) output)))
@@ -66,13 +78,32 @@ are skipped along with the directories holding them."
                                 (string-equal "adoc" (pathname-type file)))
                        collect file)))
 
-(defun copy-assets (root output)
-  "Copy every asset under ROOT into OUTPUT and return the paths written."
-  (loop for file in (asset-files root)
-        for target = (merge-pathnames (uiop:enough-pathname file root) output)
-        do (ensure-directories-exist target)
-           (uiop:copy-file file target)
-        collect target))
+(defun site-asset-files (site)
+  "Every file SITE writes to the output verbatim.
+Ordinary assets are copied whether or not anything points at them, which is
+why an unreferenced one is something check reports rather than something the
+build silently drops. Reserved directories are the exception: _media/ holds
+shared assets for a whole subtree and only the referenced ones are copied,
+so adding a file there costs nothing until a page names it."
+  (let ((root (site-root site)))
+    (append (asset-files root)
+            (remove-if-not (lambda (path)
+                             (reserved-path-p path root))
+                           (referenced-assets site)))))
+
+(defun reserved-path-p (path root)
+  "Whether PATH lies under a reserved directory of ROOT."
+  (let ((relative (uiop:enough-pathname path root)))
+    (some #'reserved-name-p (rest (pathname-directory relative)))))
+
+(defun copy-assets (site output)
+  "Copy SITE's assets into OUTPUT and return the paths written."
+  (let ((root (site-root site)))
+    (loop for file in (site-asset-files site)
+          for target = (merge-pathnames (uiop:enough-pathname file root) output)
+          do (ensure-directories-exist target)
+             (uiop:copy-file file target)
+          collect target)))
 
 (defun build (root &key output drafts)
   "Build the site rooted at ROOT. Returns the site that was built.
@@ -87,9 +118,10 @@ carrying :draft:, which is what serve does and what --drafts asks for."
                   (uiop:ensure-directory-pathname
                    (or output (merge-pathnames "_site/" root)))
                   (uiop:getcwd))))
+    (report-missing-references site)
     (dolist (page (site-pages site))
       (write-page page output site))
     (dolist (file (emit site))
       (write-output file output))
-    (copy-assets root output)
+    (copy-assets site output)
     site))

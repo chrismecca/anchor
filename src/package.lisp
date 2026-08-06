@@ -36,6 +36,19 @@
    #:site-root-config
    #:site-tags
    #:site-tagged
+   #:site-references
+
+   ;; References
+   #:reference
+   #:reference-p
+   #:reference-page
+   #:reference-node
+   #:reference-target
+   #:reference-kind
+   #:reference-path
+   #:reference-url
+   #:missing-references
+   #:referenced-assets
 
    ;; Emitters
    #:output
@@ -68,4 +81,8 @@
    #:unreadable-document
    #:unreadable-document-path
    #:unreadable-configuration
-   #:unreadable-configuration-path))
+   #:unreadable-configuration-path
+   #:missing-reference
+   #:missing-reference-url
+   #:missing-reference-target
+   #:missing-reference-reference))
