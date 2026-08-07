@@ -2,8 +2,8 @@
 
 This document describes what anchor is, what it does, and what it
 deliberately does not do. It is versioned separately from the
-implementation. Nothing described here is implemented yet; this
-document precedes the code on purpose.
+implementation. It was written before the code, and the code has since
+caught up with it: every section marked v1 is built.
 
 Every section carries a milestone:
 
@@ -100,7 +100,7 @@ Status: v1
 The filesystem is the data model. Directory structure is URL
 structure. There is no permalink configuration and no slug field.
 
-....
+----
 mysite/
   _anchor.lisp
   _media/
@@ -120,17 +120,17 @@ mysite/
         pipeline.svg
         repl.gif
   style.css
-....
+----
 
 === What is a page
 
 A directory containing `index.adoc` is a page. Its URL is its path
 relative to the source root, with a trailing slash.
 
-....
+----
 posts/2026/anchor-design/index.adoc  ->  /posts/2026/anchor-design/
 index.adoc                           ->  /
-....
+----
 
 `.adoc` files not named `index.adoc` are not pages. They are ignored
 by discovery and available to be included by documents that want
@@ -146,10 +146,10 @@ relationship.
 Media colocates with the page that uses it. A reference resolves
 page-local first, then walks up the tree looking for `_media/`.
 
-....
+----
 image::pipeline.svg[]          resolved in the bundle
 image::_media/portrait.jpg[]   resolved by walking up
-....
+----
 
 Colocation is the default because it makes a post and its media one
 movable, deletable unit, keeps references short enough to survive URL
