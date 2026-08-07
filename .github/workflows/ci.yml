@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # Both results are wanted: the pair brackets a version range, so one
+      # failing should not cancel the other.
+      fail-fast: false
+      matrix:
+        # Ubuntu 24.04 packages SBCL 2.2.9 and 26.04 packages 2.6.0, which
+        # brackets the versions README.adoc claims from both sides. The runner
+        # labels are pinned rather than tracking ubuntu-latest, so the tested
+        # versions only change when someone decides to change them.
+        os: [ubuntu-24.04, ubuntu-26.04]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # cl-adoc is not yet in the ocicl registry at a version carrying
+      # description lists, so it is checked out and resolved through the same
+      # CL_ADOC knob the Makefile already offers. The tag is pinned rather
+      # than tracking main: anchor tracks cl-adoc's released interface, and a
+      # build here should fail when a release breaks it, not when a commit
+      # does. This step and the CL_ADOC below drop out together once
+      # `ocicl install cl-adoc` can supply the version anchor needs.
+      - name: Check out cl-adoc
+        uses: actions/checkout@v4
+        with:
+          repository: chrismecca/cl-adoc
+          ref: v0.2.0
+          path: cl-adoc
+
+      - name: Install SBCL and ocicl
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sbcl
+          gh release download --repo ocicl/ocicl --pattern '*_amd64.deb' --dir /tmp
+          sudo dpkg -i /tmp/ocicl_*_amd64.deb
+          ocicl setup > ~/.sbclrc
+
+      - name: Record the toolchain under test
+        run: sbcl --version
+
+      # Installs the exact digests pinned in ocicl.csv, so a green run means
+      # the committed lockfile is sufficient to build the project.
+      - name: Install dependencies
+        run: ocicl install
+
+      - name: Run tests
+        run: make test
+        env:
+          OCICL_LOCAL_ONLY: 1
+          CL_ADOC: ${{ github.workspace }}/cl-adoc
+
+      # The executable is a shipped artifact and save-lisp-and-die can break
+      # on its own, so building it is checked rather than assumed.
+      - name: Build the executable
+        run: make bin
+        env:
+          OCICL_LOCAL_ONLY: 1
+          CL_ADOC: ${{ github.workspace }}/cl-adoc
+
+      - name: Check the executable runs
+        run: ./anchor check tests/fixtures/site
