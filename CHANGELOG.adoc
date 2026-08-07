@@ -1,0 +1,71 @@
+= Changelog
+
+Notable changes to anchor. The library is versioned independently of
+SPEC.adoc, which describes what anchor is and what it refuses to be.
+
+== Unreleased
+
+First release in preparation. Every section SPEC.adoc marks `v1` is built,
+which is what that document defines 1.0 to mean.
+
+=== Building a site
+
+A directory holding an `index.adoc` is a page and its path is its URL, so
+discovery is a walk and there is nothing to configure. Pages are parsed, the
+graph is built once, references are resolved, and then everything renders.
+
+The graph answers chronology, sections and taxonomy. A page's parent is the
+nearest ancestor that is itself a page, so a directory holding no document is
+a path component rather than a section.
+
+`_anchor.lisp` configures its directory and everything below it, merged
+parent to child. It is evaluated rather than read, so the forms before the
+last one can define the layout function the last one names.
+
+Drafts carry `:draft:` and are left out of the graph rather than out of the
+output, so a published page linking to one is a broken reference and says so.
+
+=== Output
+
+Layouts are functions of a page and a site returning HTML as s-expressions,
+serialised by anchor rather than by a dependency: head-tag composition is a
+list of functions returning forms, and a list of forms is something you can
+build, filter and test.
+
+Emitters are functions of a site returning output files. Four ship: an Atom
+feed, `sitemap.xml`, `robots.txt`, and one `/tags/` page. The feed carries
+articles rather than sections, because a page with children is an index of
+other pages.
+
+The feed, the sitemap, the canonical link and the Open Graph tags are absent
+from a site with no `:base-url`. There is no valid feed with relative entry
+ids, and emitting a broken one is worse than emitting none.
+
+=== References and media
+
+Every link and image is resolved once, before anything renders, and the
+resolved target is written back onto the node. Nothing rewrites the output.
+
+Resolving a relative target walks up from the page's own directory to the
+root, so colocated media is found on the first step and `_media/` on a later
+one. Colocation and shared assets are not two rules.
+
+=== Commands
+
+`anchor build`, `anchor serve` and `anchor check`. `check` reports what is
+missing, undated, orphaned, duplicated, what each page weighs, and what every
+reference resolved to, and exits non-zero when a site is wrong.
+
+`serve` keeps the graph in the image on its own thread, so the REPL that
+started it stays usable and a recompiled layout shows up on the next request.
+It speaks enough HTTP to serve a directory to a browser on loopback and no
+more.
+
+=== Known limits
+
+A stylesheet is named by a layout rather than by a document, so `check`
+reports it as an orphan. The reference relation covers what documents point
+at, which is why orphans are reported and never deleted.
+
+anchor needs cl-adoc 0.2.0 or later, for description lists. Until that
+version reaches the ocicl registry, `CL_ADOC` points at a local checkout.
