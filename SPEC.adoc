@@ -41,22 +41,26 @@ convention wins.
 
 Status: v1
 
-This document defines 1.0. Every section marked v1 ships in 1.0, and
-when the last of them ships, anchor is finished.
+This document defines 1.0: every section marked v1. All of them have
+shipped, so anchor is finished and this freeze is in force rather than
+in prospect.
 
-Finished means feature-frozen. After 1.0 anchor takes bug fixes and the
-changes required to track cl-adoc's released interface. It does not
-take features. Sections marked later are not promises; promoting one
-requires a new version of this specification, and that should be rare.
-Sections marked non-goal are permanent.
+Finished means feature-frozen. anchor takes bug fixes and the changes
+required to track cl-adoc's released interface. It does not take
+features, and the Lisp interface is settled on the same terms. Sections
+marked later are not promises; promoting one requires a new version of
+this specification, and that should be rare. Sections marked non-goal
+are permanent.
 
 anchor has no privileged consumer. Its author's site uses it on the
 same terms as anyone else's, and no site's requirements get to reopen a
 non-goal.
 
-The freeze is written down rather than held as an intention because a
-written one can be checked. The work remaining is the v1 sections not
-yet built, and anyone can count them.
+The freeze was written down rather than held as an intention because a
+written one can be checked. It was checkable while the work was
+outstanding, by counting the v1 sections not yet built, and it is
+checkable now: a change that is not a bug fix and not cl-adoc moving
+underneath is a change this document forbids.
 
 == Non-goals
 
@@ -556,7 +560,8 @@ Status: v1
 Implementation:: SBCL. Other implementations are untested rather than
   unsupported.
 Build:: ocicl, as with cl-adoc.
-Version:: 0.x. The Lisp interface may change between releases.
+Version:: 1.0. The freeze below is in force, so the Lisp interface is
+  settled: it changes for a bug or for cl-adoc, and not otherwise.
 License:: MIT.
 
 anchor tracks cl-adoc's released interface. It does not depend on

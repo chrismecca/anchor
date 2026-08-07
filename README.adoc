@@ -151,12 +151,17 @@ assumed to be yours. anchor is not a sandbox and does not attempt to be one.
 
 == Stability
 
-anchor is at 0.x and the Lisp interface may change between releases.
+anchor is finished.
 
-The scope is finite and written down. Every section SPEC.adoc marks `v1`
-ships in 1.0, and when the last of them ships anchor is feature-frozen: bug
-fixes and whatever it takes to track cl-adoc's released interface, and
-nothing else. Sections marked `later` are not promises.
+That is not a way of saying it is abandoned. The scope was finite and written
+down before the code existed: every section SPEC.adoc marks `v1`, and nothing
+else. All of them shipped in 1.0, so the freeze is now in force. anchor takes
+bug fixes and whatever it takes to track cl-adoc's released interface, and the
+Lisp interface is settled on the same terms. Sections marked `later` are not
+promises, and sections marked `non-goal` are permanent.
+
+A tool that does a known amount and then stops is the point rather than a
+compromise.
 
 == License
 

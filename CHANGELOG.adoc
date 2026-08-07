@@ -3,10 +3,12 @@
 Notable changes to anchor. The library is versioned independently of
 SPEC.adoc, which describes what anchor is and what it refuses to be.
 
-== Unreleased
+== 1.0.0
 
-First release in preparation. Every section SPEC.adoc marks `v1` is built,
-which is what that document defines 1.0 to mean.
+First release, and the last one to add anything. Every section SPEC.adoc
+marks `v1` is built, which is what that document defines 1.0 to mean, so the
+freeze it describes is now in force: bug fixes and whatever it takes to track
+cl-adoc's released interface, and nothing else.
 
 === Building a site
 
