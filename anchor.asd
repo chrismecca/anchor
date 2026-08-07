@@ -4,7 +4,7 @@
   :description "A static site generator for AsciiDoc, built on cl-adoc."
   :author "Chris Mecca"
   :license "MIT"
-  :version "0.0.1"
+  :version "1.0.0"
   :homepage "https://github.com/chrismecca/anchor"
   ;; sb-bsd-sockets is an SBCL contrib rather than a dependency to fetch. The
   ;; development server is the only thing that uses it.
