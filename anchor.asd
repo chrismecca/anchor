@@ -50,5 +50,6 @@
                              (:file "check")
                              (:file "xml")
                              (:file "cli")
-                             (:file "serve"))))
+                             (:file "serve")
+                             (:file "selfhost"))))
   :perform (test-op (op c) (uiop:symbol-call :parachute :test :anchor/tests)))
