@@ -11,12 +11,7 @@ v1:: Required before the first tagged release.
 later:: Wanted, deferred, spec'd only far enough to keep the door open.
 non-goal:: Will not be built. Listed so the answer is on record.
 
-This file restricts itself to the AsciiDoc subset cl-adoc parses, with
-one exception: the description lists it uses throughout. cl-adoc does
-not parse those yet, so anchor cannot render this document today. That
-is being fixed in cl-adoc rather than worked around here, and this
-paragraph loses its second sentence when it lands.
-
+This file restricts itself to the AsciiDoc subset cl-adoc parses.
 anchor must be able to render its own specification.
 
 == Thesis
