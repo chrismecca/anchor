@@ -102,7 +102,10 @@ does not configure."
                           base)))))
 
 (defun tag-id (tag)
-  "TAG as an element id: lowercase, and anything else becomes a hyphen."
+  "TAG as an element id: lowercase, and anything else becomes a hyphen.
+Exported because a layout that links a tag to its place on /tags/ has to
+produce the same string this put in the id, and reimplementing the rule is
+how the two come to disagree."
   (string-downcase
    (map 'string
         (lambda (character)
@@ -113,7 +116,12 @@ does not configure."
   "A page anchor writes rather than reads.
 The tag index has a title and a URL and no file behind it, and everything
 that renders a page wants a page. Its source is the root's, so the root's
-configuration is the one that applies to it."
+configuration is the one that applies to it.
+
+Exported because an emitter that writes a page needs one, and writing an
+emitter is what SPEC.adoc offers a site in place of the pages anchor
+defers. Without this that offer cannot be taken up from outside the
+package."
   (make-page :source (merge-pathnames "index.adoc" (site-root site))
              :url url
              :document (adoc:parse-string (format nil "= ~a~%" title))))

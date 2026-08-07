@@ -102,6 +102,8 @@
    #:sitemap
    #:robots-txt
    #:tags-page
+   #:generated-page
+   #:tag-id
    #:base-url
    #:absolute-url
 
