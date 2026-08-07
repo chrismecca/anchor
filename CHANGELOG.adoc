@@ -3,6 +3,27 @@
 Notable changes to anchor. The library is versioned independently of
 SPEC.adoc, which describes what anchor is and what it refuses to be.
 
+== 1.0.1
+
+A bug fix, under the terms the freeze allows.
+
+=== `generated-page` and `tag-id` are exported
+
+SPEC.adoc defers per-tag pages rather than declining them, and the reason it
+gives is that a site wanting them before anchor ships them writes an emitter:
+"That is what the interface is for, and it is why per-tag pages are deferred
+rather than missing."
+
+A site could not. `*emitters*` was exported and an emitter that writes a page
+needs `generated-page`, which was not, so the offer could not be taken up from
+outside the package. `tag-id` was internal on the same footing: a layout that
+links a tag to its place on the tag index has to produce the id the index
+used, and the only way to do that was to reimplement the rule and hope the two
+stayed in agreement.
+
+Neither function changed. This is the export list catching up with what the
+specification already described, which is why it is a fix and not a feature.
+
 == 1.0.0
 
 First release, and the last one to add anything. Every section SPEC.adoc

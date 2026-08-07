@@ -72,6 +72,52 @@ escaped rather than reaching the feed as elements.")))
     (true (search "User-agent: *" text))
     (true (search "Sitemap: https://example.com/sitemap.xml" text))))
 
+;;; The offer in SPEC.adoc
+;;;
+;;; Per-tag pages are deferred rather than missing, and the reason given is
+;;; that a site wanting them writes an emitter. This package does not use
+;;; #:anchor, so everything below reaches anchor through its exports and the
+;;; test fails to compile if the offer cannot be taken up.
+
+(defun per-tag-pages (site)
+  "One page per tag, which is the emitter SPEC.adoc says a site can write."
+  (loop for tag in (anchor:site-tags site)
+        for url = (format nil "/tags/~a/" (anchor:tag-id tag))
+        collect (anchor:output
+                 (format nil "tags/~a/index.html" (anchor:tag-id tag))
+                 (anchor:render-document
+                  (anchor:page-shell
+                   (anchor:generated-page site url tag)
+                   site
+                   `(:article
+                     (:h1 ,tag)
+                     (:nav (:ul ,@(mapcar #'anchor:index-row
+                                          (anchor:site-tagged site tag))))))))))
+
+(define-test (emit a-site-can-write-an-emitter)
+  (let* ((site (test-site))
+         (files (per-tag-pages site))
+         (lisp (find "tags/lisp/index.html" files
+                     :key #'anchor:output-path :test #'string=)))
+    (is = 3 (length files) "One page for each tag in use.")
+    (true lisp)
+    (let ((html (anchor:output-content lisp)))
+      (true (search "<h1>lisp</h1>" html))
+      (true (search "<a href=\"/posts/2026/second-post/\">The Second Post</a>" html))
+      (true (search "<title>lisp — A Sample Site</title>" html)
+            "A generated page gets the same head and the root's configuration
+as one read from disk."))))
+
+(define-test (emit tag-ids-are-one-rule)
+  "A layout links a tag to the id the tag index gave it, so the rule that
+makes one is the site's business as much as anchor's."
+  (is string= "lisp" (anchor:tag-id "lisp"))
+  (is string= "two-words" (anchor:tag-id "Two Words"))
+  (is string= "c--" (anchor:tag-id "C++"))
+  (true (search (format nil "<h2 id=\"~a\">" (anchor:tag-id "asciidoc"))
+                (emitted (test-site) "tags/index.html"))
+        "And the index uses it, so the two cannot drift apart."))
+
 (define-test (emit without-base-url)
   "A site with no :base-url gets what can still be made correctly."
   (let* ((root (fixture-site))
