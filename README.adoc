@@ -135,12 +135,13 @@ anchor needs SBCL and ocicl. It is built and tested against the SBCL versions
 Ubuntu packages in 24.04 and 26.04, which is 2.2.9 and 2.6.0. Other
 implementations are untested rather than unsupported.
 
-anchor needs cl-adoc 0.2.0 or later. Until that version is in the ocicl
-registry, point `CL_ADOC` at a local checkout:
+Dependencies come from ocicl, at the digests pinned in `ocicl.csv`:
 
 ----
-make test CL_ADOC=../cl-adoc
+ocicl install
 ----
+
+anchor needs cl-adoc 0.2.0 or later, for description lists.
 
 == A note on trust
 

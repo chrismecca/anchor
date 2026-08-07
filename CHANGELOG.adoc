@@ -67,5 +67,4 @@ A stylesheet is named by a layout rather than by a document, so `check`
 reports it as an orphan. The reference relation covers what documents point
 at, which is why orphans are reported and never deleted.
 
-anchor needs cl-adoc 0.2.0 or later, for description lists. Until that
-version reaches the ocicl registry, `CL_ADOC` points at a local checkout.
+anchor needs cl-adoc 0.2.0 or later, for description lists.

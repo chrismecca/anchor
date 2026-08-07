@@ -23,20 +23,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # cl-adoc is not yet in the ocicl registry at a version carrying
-      # description lists, so it is checked out and resolved through the same
-      # CL_ADOC knob the Makefile already offers. The tag is pinned rather
-      # than tracking main: anchor tracks cl-adoc's released interface, and a
-      # build here should fail when a release breaks it, not when a commit
-      # does. This step and the CL_ADOC below drop out together once
-      # `ocicl install cl-adoc` can supply the version anchor needs.
-      - name: Check out cl-adoc
-        uses: actions/checkout@v4
-        with:
-          repository: chrismecca/cl-adoc
-          ref: v0.2.0
-          path: cl-adoc
-
       - name: Install SBCL and ocicl
         env:
           GH_TOKEN: ${{ github.token }}
@@ -59,7 +45,6 @@ jobs:
         run: make test
         env:
           OCICL_LOCAL_ONLY: 1
-          CL_ADOC: ${{ github.workspace }}/cl-adoc
 
       # The executable is a shipped artifact and save-lisp-and-die can break
       # on its own, so building it is checked rather than assumed.
@@ -67,7 +52,6 @@ jobs:
         run: make bin
         env:
           OCICL_LOCAL_ONLY: 1
-          CL_ADOC: ${{ github.workspace }}/cl-adoc
 
       - name: Check the executable runs
         run: ./anchor check tests/fixtures/site

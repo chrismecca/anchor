@@ -1,4 +1,5 @@
 alexandria, ghcr.io/ocicl/alexandria@sha256:e433c2e076ed3bcf8641b97b00192680db2201d305efac9293539dee88c7fbf7, alexandria-20240503-8514d8e/alexandria.asd
+cl-adoc, ghcr.io/ocicl/cl-adoc@sha256:a09d8e71017c9df24212f4ef06999068c854a8a124c1aabb50b4760e702085ed, cl-adoc-20260807-2c20b8d/cl-adoc.asd
 documentation-utils, ghcr.io/ocicl/documentation-utils@sha256:b2a1b3f3bcd1a738af85ae2b0168d408c177661eab6d6bbebb254e394d983f54, documentation-utils-20230511-98630dd/documentation-utils.asd
 esrap, ghcr.io/ocicl/esrap@sha256:d1748dc272d987937d759d2376dc18027efb1ed84c4b3561a367be3b4233183a, esrap-20251010-54debc5/esrap.asd
 form-fiddle, ghcr.io/ocicl/form-fiddle@sha256:58b6cdf3909911b876fb8b240ae4e2cfa274acd93d78e2fc65d1d981a295ce0a, form-fiddle-20260218-a4481cc/form-fiddle.asd
