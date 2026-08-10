@@ -1,4 +1,4 @@
-;;;; Head tags, and the things a document says about itself.
+;;;; Head-tag tests and document-derived metadata tests.
 
 (in-package #:anchor/tests)
 
@@ -12,24 +12,24 @@
 (define-test (head composition)
   (let ((site (test-site)))
     (true (every #'functionp anchor:*head-tags*)
-          "The head is a list of functions, not a block of markup, which is
-what lets a site drop or replace one member without touching the rest.")
+          "The head is a list of functions, not a block of markup. A site can
+drop or replace one member without touching the others.")
     (let* ((page (anchor:site-page site "/"))
            (anchor:*head-tags* (list #'anchor:head-title-tag)))
       (is string= "<title>A Sample Site</title>
 " (anchor:serialize (anchor:head-tags page site))
-          "Rebinding the list replaces the head entirely."))))
+          "Rebinding the list replaces the head."))))
 
 (define-test (head description)
   (let ((html (head-of "/posts/2026/first-post/")))
     (true (search "name=\"description\"" html))
     (true (search "A lead paragraph" html)
-          "With no :description:, the excerpt is what describes the page.")))
+          "Without :description:, the excerpt describes the page.")))
 
 (define-test (head declared-description)
   (let ((html (head-of "/posts/2026/second-post/")))
     (true (search "content=\"A post that says what it is about.\"" html)
-          "An author who declared a description is believed over the excerpt.")))
+          "An author-written description wins over the excerpt.")))
 
 (define-test (head canonical-and-cards)
   (let ((html (head-of "/posts/2026/first-post/")))
@@ -44,7 +44,7 @@ what lets a site drop or replace one member without touching the rest.")
     (true (search "name=\"twitter:card\" content=\"summary\"" html)))
   (let ((html (head-of "/posts/")))
     (true (search "property=\"og:type\" content=\"website\"" html)
-          "A page with children is an index of other pages, not an article.")))
+          "A page with children is an index, not an article.")))
 
 (define-test (head needs-a-base-url)
   (let* ((site (anchor:make-site (fixture-site)))
@@ -54,18 +54,18 @@ what lets a site drop or replace one member without touching the rest.")
           (list :title "A Sample Site"))
     (let ((html (anchor:serialize (anchor:head-tags page site))))
       (false (search "canonical" html)
-             "A canonical link has to be absolute, so without a base there is
-none rather than a relative one.")
+             "A canonical link must be absolute. Without a base URL, there is
+no canonical link.")
       (false (search "og:url" html))
       (true (search "twitter:card" html)
-            "A summary card needs no absolute URL and survives."))))
+            "A summary card does not need an absolute URL."))))
 
 (define-test (head stem)
   (let ((site (test-site)))
     (false (anchor:page-uses-stem-p (anchor:site-page site "/about/")))
     (true (anchor:page-uses-stem-p (anchor:site-page site "/posts/2026/second-post/"))
-          "The document answers whether it holds mathematics. What a layout
-does with the answer is the layout's business; anchor ships no renderer.")))
+          "The document reports whether it contains mathematics. The layout
+decides what to do with that answer. anchor ships no renderer.")))
 
 (define-test (head text-handling)
   (is string= "one two three"

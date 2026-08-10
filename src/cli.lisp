@@ -1,14 +1,13 @@
 ;;;; The command line.
 ;;;;
-;;;; The three commands the spec names, and nothing else.
+;;;; anchor has the three commands named by the specification, and no others.
 ;;;;
-;;;; The option parser is twenty lines and has no dependency behind it. anchor
-;;;; takes a directory, three flags and a path, and a library for that would
-;;;; be larger than the thing it parses.
+;;;; The option parser is small and has no dependency behind it. anchor accepts
+;;;; a directory, three flags, and a path. A library for that would be larger
+;;;; than the thing it parses.
 ;;;;
-;;;; RUN returns an exit code and never quits, so the whole command line can
-;;;; be exercised from the REPL and from tests. MAIN is the only part that
-;;;; ends a process.
+;;;; RUN returns an exit code and does not quit. Tests and the REPL can call it
+;;;; directly. MAIN is the only function that ends the process.
 
 (in-package #:anchor)
 
@@ -16,7 +15,9 @@
   (or (ignore-errors
        (asdf:component-version (asdf:find-system "anchor" nil)))
       "unknown")
-  "Read from the system definition, so there is one place it is written.")
+  "Version read from the system definition.
+
+The version is written in one place.")
 
 (defparameter *usage*
   "anchor -- a static site generator for AsciiDoc
@@ -67,10 +68,11 @@ serve includes drafts and rebuilds when the source changes.
     (values (nreverse positional) options)))
 
 (defun option-policy (options)
-  "The build policy OPTIONS ask for.
-:strict by default rather than the *POLICY* default of :interactive. There is
-no debugger behind a command line, so stopping at the offending page would
-only mean stopping."
+  "Return the build policy requested by OPTIONS.
+
+The command line defaults to :strict instead of *POLICY*'s default of
+:interactive. There is no useful debugger behind a command-line run. Stopping
+at the offending page would only mean stopping."
   (if (getf options :force) :permissive :strict))
 
 (defun command-build (root options)
@@ -129,5 +131,5 @@ only mean stopping."
       1)))
 
 (defun main ()
-  "The entry point of the built executable."
+  "Entry point for the built executable."
   (uiop:quit (run (uiop:command-line-arguments))))

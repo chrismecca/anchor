@@ -1,4 +1,5 @@
-= A Site With A Forgotten Date
+= A Site with a Forgotten Date
 
-The root page has no date and needs none: it has no siblings to set a
-pattern it could break.
+The root page has no date and does not need one.
+
+It has no siblings, so there is no date pattern for it to break.

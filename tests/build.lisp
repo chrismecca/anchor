@@ -1,4 +1,4 @@
-;;;; Building the sample site end to end.
+;;;; End-to-end build tests.
 
 (in-package #:anchor/tests)
 
@@ -10,7 +10,9 @@
                     (uiop:temporary-directory))))
 
 (defmacro with-built-site ((output) &body body)
-  "Build the fixture site into a fresh directory, and remove it afterwards."
+  "Build the fixture site into a fresh directory.
+
+Remove the directory afterward."
   `(let ((,output (temporary-output)))
      (unwind-protect
           (progn (anchor:build (fixture-site) :output ,output)
@@ -19,7 +21,9 @@
                                            :if-does-not-exist :ignore))))
 
 (defun read-output (output relative)
-  "The contents of RELATIVE under OUTPUT, or NIL when it was not written."
+  "Return the contents of RELATIVE below OUTPUT.
+
+Return NIL when the file was not written."
   (let ((path (merge-pathnames relative output)))
     (and (probe-file path) (uiop:read-file-string path))))
 
@@ -44,23 +48,23 @@
     (let ((html (read-output output "posts/2026/first-post/index.html")))
       (true (search "<!DOCTYPE html>" html))
       (true (search "<title>The First Post — A Sample Site</title>" html)
-            "The page's title, qualified by the site's from the cascade.")
+            "The page title is qualified by the site title from the cascade.")
       (true (search "<h1>The First Post</h1>" html))
       (true (search "<time datetime=\"2026-08-05\">August 5, 2026</time>" html))
       (true (search "name=\"viewport\"" html)
             "Every default layout states the viewport.")
       (true (search "content=\"light dark\"" html)
-            "And that the page supports both colour schemes.")
+            "Every default layout states that the page supports both color schemes.")
       (is = 1 (count-substring "<h1" html)
-          "The title appears once, not once from the layout and again from
-cl-adoc's rendering of the document."))))
+          "The title appears once. It is not emitted by both the layout and
+cl-adoc's document rendering."))))
 
 (define-test (build undated-page)
   (with-built-site (output)
     (let ((html (read-output output "about/index.html")))
       (true (search "<h1>About</h1>" html))
       (false (search "<time" html)
-             "A page with no date renders without the element, not with an
+             "A page with no date omits the time element instead of writing an
 empty one."))))
 
 (define-test (build relative-root)
@@ -71,7 +75,7 @@ empty one."))))
              (anchor:build "." :output output))
            (true (read-output output "posts/2026/first-post/index.html")
                  "A relative root is resolved against the current directory.
-Every other test passes an absolute path, so nothing else covers this."))
+Other tests pass absolute paths, so they do not cover this."))
       (uiop:delete-directory-tree output :validate t
                                          :if-does-not-exist :ignore))))
 
@@ -84,26 +88,26 @@ Every other test passes an absolute path, so nothing else covers this."))
             "The newest page leads, linked and with its excerpt.")
       (true (search "A lead paragraph" html))
       (false (search "Body text with <code>code</code>" html)
-             "Its body is not repeated on the index, only its excerpt.")
+             "The index shows the excerpt, not the full body.")
       (true (search "<a href=\"/posts/2026/second-post/\">The Second Post</a>" html)
-            "Everything remaining is a row of title and date.")
+            "Remaining pages are rows with title and date.")
       (false (search "chronology has something to order" html)
-             "A row carries no excerpt."))))
+             "A row has no excerpt."))))
 
 (define-test (build drafts)
   (with-built-site (output)
     (false (read-output output "posts/2026/a-draft/index.html")
            "A draft is not written.")
     (false (search "A Draft" (read-output output "index.html"))
-           "Nor listed."))
+           "A draft is not listed."))
   (let ((output (temporary-output)))
     (unwind-protect
          (progn
            (anchor:build (fixture-site) :output output :drafts t)
            (true (read-output output "posts/2026/a-draft/index.html")
-                 "Asking for drafts writes them.")
+                 "Requesting drafts writes them.")
            (true (search "A Draft" (read-output output "index.html"))
-                 "And the front page leads with it, since it is the newest."))
+                 "The front page leads with the draft because it is newest."))
       (uiop:delete-directory-tree output :validate t
                                          :if-does-not-exist :ignore))))
 
@@ -112,10 +116,10 @@ Every other test passes an absolute path, so nothing else covers this."))
     (let ((archive (read-output output "archive/index.html"))
           (about (read-output output "about/index.html")))
       (true (search "<a href=\"/posts/2026/first-post/\">" archive)
-            "archive/ names :layout in its own _anchor.lisp and gets an index
+            "archive/ names :layout in its own _anchor.lisp. It gets an index
 even though it is not the root page.")
       (false (search "<a href=\"/posts/2026/first-post/\">" about)
-             "about/ names none and gets the article layout."))))
+             "about/ names no layout and gets the article layout."))))
 
 (define-test (build footer)
   (with-built-site (output)
@@ -125,7 +129,7 @@ even though it is not the root page.")
     (true (search "<footer>
 <p>Someone Else</p>"
                   (read-output output "posts/2026/first-post/index.html"))
-          "And is overridden for everything under posts/.")))
+          "The author is overridden below posts/.")))
 
 (define-test (build policy)
   (let ((output (temporary-output)))
@@ -134,22 +138,22 @@ even though it is not the root page.")
            (fail (anchor:build (broken-fixture-site) :output output
                                                      :policy :strict)
                  'anchor:missing-reference
-                 ":strict aborts, which is what CI wants.")
+                 ":strict aborts. CI uses this.")
            (handler-bind ((warning #'muffle-warning))
              (anchor:build (broken-fixture-site) :output output
                                                  :policy :permissive))
            (true (read-output output "index.html")
-                 ":permissive reports the problem and writes the site anyway,
-which is what --force asks for."))
+                 ":permissive reports the problem and still writes the site.
+--force uses this."))
       (uiop:delete-directory-tree output :validate t
                                          :if-does-not-exist :ignore))))
 
 (define-test (build assets)
   (with-built-site (output)
     (true (read-output output "style.css")
-          "A stylesheet is copied verbatim.")
+          "A stylesheet is copied without changes.")
     (true (read-output output "posts/2026/first-post/diagram.svg")
-          "So is media colocated with a page.")
+          "Page-local media is copied too.")
     (false (read-output output "posts/2026/first-post/notes.adoc")
            "A document is never copied as an asset.")
     (false (read-output output "_anchor.lisp")
@@ -158,9 +162,9 @@ which is what --force asks for."))
 (define-test (build media-is-copied-when-referenced)
   (with-built-site (output)
     (true (read-output output "_media/portrait.svg")
-          "A reserved directory is not copied, but the contents of _media/
-that something points at are.")
+          "A reserved directory is not copied as a whole. Referenced files
+inside _media/ are copied.")
     (false (read-output output "_media/unused.svg")
-           "What nothing points at is not, so a shared directory costs
-nothing until a page names something in it.")
+           "Unreferenced shared media is not copied. A shared directory costs
+nothing until a page names a file in it.")
     (false (read-output output "_media/shared.txt"))))

@@ -1,23 +1,24 @@
-;;;; Serialising an HTML tree.
+;;;; Serialize an HTML tree.
 ;;;;
-;;;; A layout returns data: a list whose head is a keyword naming an element,
-;;;; followed by keyword/value attribute pairs, followed by children. Children
-;;;; are strings, numbers, or more of the same.
+;;;; A layout returns data. The data is a list whose first item is a keyword
+;;;; that names an element. Attribute keyword/value pairs follow it. Children
+;;;; come after the attributes.
 ;;;;
 ;;;;     (:p :class "meta" (:time :datetime "2026-08-05" "August 5, 2026"))
 ;;;;
-;;;; Attributes run until the first element that is not a keyword, which is
-;;;; where the children begin. A child is never a bare keyword, so that
-;;;; boundary needs no marker.
+;;;; Attributes end at the first item that is not a keyword. That is where
+;;;; children begin. A child is never a bare keyword, so no marker is needed.
 ;;;;
-;;;; Layouts return data rather than expanding into code because head-tag
-;;;; composition is a list of functions each returning a form, and a list of
-;;;; forms is something you can build, filter and test. That is what anchor
-;;;; would give up by depending on a generator that runs at compile time, and
-;;;; it is worth more than the hundred lines below.
+;;;; Layouts return data instead of expanding into code because head-tag
+;;;; composition is a list of functions. Each function returns a form. A list
+;;;; of forms can be built, filtered, and tested.
 ;;;;
-;;;; Escaping happens here and nowhere else, on strings that have never been
-;;;; part of a markup string. (:raw ...) is the documented exception.
+;;;; A compile-time HTML generator has a different shape. Using one would give
+;;;; up that composition. The trade is not worth the small amount of code saved
+;;;; here.
+;;;;
+;;;; Escaping happens here and nowhere else. It happens on strings that have
+;;;; never been part of a markup string. (:raw ...) is the documented exception.
 
 (in-package #:anchor)
 
@@ -28,23 +29,26 @@
 (defparameter *container-elements*
   '(:html :head :body :article :section :nav :header :footer :main :aside
     :div :figure :blockquote :ul :ol)
-  "Elements whose children are themselves blocks.
-A newline follows the opening tag as well as the closing one, so that the
-nesting is visible in the output.")
+  "Elements whose children are block-level elements.
+
+A newline follows the opening tag and the closing tag. This keeps nesting
+visible in the output.")
 
 (defparameter *block-elements*
   '(:title :meta :link :hr :figcaption :pre :li :p
     :h1 :h2 :h3 :h4 :h5 :h6)
   "Elements that end a line.
-Their content is inline, so a newline follows the closing tag only; breaking
-after the opening tag would put the first word on a line of its own.
 
-Both of these are cosmetic. They exist so that the page anchor wraps around
-cl-adoc's output does not read as though a different program wrote it.")
+Their content is inline. A newline follows the closing tag only. A newline
+after the opening tag would put the first word on a separate line.
+
+These rules are cosmetic. They keep anchor's wrapper HTML visually close to
+cl-adoc's HTML output.")
 
 (defun escape-text (string stream)
-  "Write STRING to STREAM with the three characters that are markup in HTML
-text content replaced by entities."
+  "Write STRING to STREAM as HTML text content.
+
+Replace `&`, `<`, and `>` with entities."
   (loop for character across string
         do (case character
              (#\& (write-string "&amp;" stream))
@@ -53,7 +57,7 @@ text content replaced by entities."
              (t (write-char character stream)))))
 
 (defun escape-attribute (string stream)
-  "Write STRING to STREAM escaped for use inside a double-quoted attribute."
+  "Write STRING to STREAM for use in a double-quoted HTML attribute."
   (loop for character across string
         do (case character
              (#\& (write-string "&amp;" stream))
@@ -63,14 +67,18 @@ text content replaced by entities."
              (t (write-char character stream)))))
 
 (defun element-name (keyword)
-  "The HTML name of KEYWORD: :http-equiv is \"http-equiv\"."
+  "Return the HTML name for KEYWORD.
+
+For example, :HTTP-EQUIV becomes \"http-equiv\"."
   (string-downcase (symbol-name keyword)))
 
 (defun write-attribute (name value stream)
   "Write one attribute to STREAM.
-A NIL value omits the attribute entirely, so a layout can write an optional
-attribute inline without a conditional around the whole element. A value of T
-writes the bare name, for the boolean attributes that carry no value."
+
+A NIL value omits the attribute. This lets a layout write optional attributes
+without wrapping the whole element in a conditional.
+
+A value of T writes only the attribute name. Use this for boolean attributes."
   (cond
     ((null value))
     ((eq value t)
@@ -84,12 +92,12 @@ writes the bare name, for the boolean attributes that carry no value."
      (write-char #\" stream))))
 
 (defun serialize-element (form stream)
-  "Write the element FORM to STREAM."
+  "Write element FORM to STREAM."
   (let ((tag (first form))
         (rest (rest form)))
     (write-char #\< stream)
     (write-string (element-name tag) stream)
-    ;; One pass writes the attributes and leaves REST on the first child.
+    ;; Write attributes in one pass and leave REST at the first child.
     (loop while (and (consp rest) (keywordp (first rest)))
           do (write-attribute (first rest) (second rest) stream)
              (setf rest (cddr rest)))
@@ -112,9 +120,12 @@ writes the bare name, for the boolean attributes that carry no value."
 
 (defun serialize (form &optional stream)
   "Write FORM to STREAM as HTML.
-Writes to STREAM when one is supplied and returns NIL; otherwise returns the
-HTML as a string. NIL forms write nothing, so a layout can drop an element by
-returning NIL in its place."
+
+When STREAM is supplied, write to it and return NIL. Otherwise return the HTML
+as a string.
+
+A NIL form writes nothing. This lets a layout drop an element by returning NIL
+where the element would be."
   (if stream
       (cond
         ((null form))
@@ -126,7 +137,7 @@ returning NIL in its place."
          (dolist (chunk (rest form))
            (when chunk (write-string chunk stream))))
         ((keywordp (first form)) (serialize-element form stream))
-        ;; A bare list of forms, which is what head-tag composition returns.
+        ;; A bare list of forms is what head-tag composition returns.
         (t (dolist (child form) (serialize child stream))))
       (with-output-to-string (out)
         (serialize form out))))

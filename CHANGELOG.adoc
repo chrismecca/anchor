@@ -1,93 +1,117 @@
 = Changelog
 
-Notable changes to anchor. The library is versioned independently of
-SPEC.adoc, which describes what anchor is and what it refuses to be.
+Notable changes to anchor.
+
+anchor and SPEC.adoc are versioned separately. SPEC.adoc defines what anchor
+does and what it refuses to do.
 
 == 1.0.1
 
-A bug fix, under the terms the freeze allows.
+A bug fix allowed by the freeze.
 
 === `generated-page` and `tag-id` are exported
 
-SPEC.adoc defers per-tag pages rather than declining them, and the reason it
-gives is that a site wanting them before anchor ships them writes an emitter:
+SPEC.adoc defers per-tag pages. It does not reject them. It says a site that
+wants per-tag pages can write an emitter:
+
 "That is what the interface is for, and it is why per-tag pages are deferred
 rather than missing."
 
-A site could not. `*emitters*` was exported and an emitter that writes a page
-needs `generated-page`, which was not, so the offer could not be taken up from
-outside the package. `tag-id` was internal on the same footing: a layout that
-links a tag to its place on the tag index has to produce the id the index
-used, and the only way to do that was to reimplement the rule and hope the two
-stayed in agreement.
+That interface was incomplete. `*emitters*` was exported, but
+`generated-page` was not. An emitter that writes a page needs
+`generated-page`, so site code outside the package could not use the promised
+extension point.
 
-Neither function changed. This is the export list catching up with what the
-specification already described, which is why it is a fix and not a feature.
+`tag-id` had the same problem. A layout that links a tag to the tag index must
+use the same identifier that the index uses. Without `tag-id`, the layout had
+to reimplement the rule and hope both rules stayed equal.
+
+No function behavior changed. The export list now matches the interface that
+SPEC.adoc already described. This is therefore a fix, not a feature.
 
 == 1.0.0
 
-First release, and the last one to add anything. Every section SPEC.adoc
-marks `v1` is built, which is what that document defines 1.0 to mean, so the
-freeze it describes is now in force: bug fixes and whatever it takes to track
-cl-adoc's released interface, and nothing else.
+First release.
+
+This is also the last release that adds features. Every section that SPEC.adoc
+marks `v1` is built. That is what SPEC.adoc defines as 1.0. The freeze is now
+in force.
+
+anchor now takes only bug fixes and changes required to track cl-adoc's
+released interface.
 
 === Building a site
 
-A directory holding an `index.adoc` is a page and its path is its URL, so
-discovery is a walk and there is nothing to configure. Pages are parsed, the
-graph is built once, references are resolved, and then everything renders.
+A directory that contains `index.adoc` is a page. Its path is its URL.
+Discovery is therefore a filesystem walk. Nothing must be configured.
 
-The graph answers chronology, sections and taxonomy. A page's parent is the
-nearest ancestor that is itself a page, so a directory holding no document is
-a path component rather than a section.
+anchor parses pages, builds the graph once, resolves references, and then
+renders output.
 
-`_anchor.lisp` configures its directory and everything below it, merged
-parent to child. It is evaluated rather than read, so the forms before the
-last one can define the layout function the last one names.
+The graph answers chronology, section structure, and taxonomy. A page's
+parent is the nearest ancestor directory that is also a page. A directory with
+no document is only a path component, not a section.
 
-Drafts carry `:draft:` and are left out of the graph rather than out of the
-output, so a published page linking to one is a broken reference and says so.
+`_anchor.lisp` configures its directory and all directories below it.
+Configuration is merged parent to child. The file is evaluated, not read as
+data. Earlier forms can therefore define the layout function named by the last
+form.
+
+Drafts use `:draft:`. Drafts are left out of the graph, not only out of the
+output. A published page that links to a draft therefore has a broken
+reference, and anchor reports it.
 
 === Output
 
-Layouts are functions of a page and a site returning HTML as s-expressions,
-serialised by anchor rather than by a dependency: head-tag composition is a
-list of functions returning forms, and a list of forms is something you can
-build, filter and test.
+Layouts are functions. A layout receives a page and a site and returns HTML as
+s-expressions. anchor serializes those forms itself.
 
-Emitters are functions of a site returning output files. Four ship: an Atom
-feed, `sitemap.xml`, `robots.txt`, and one `/tags/` page. The feed carries
-articles rather than sections, because a page with children is an index of
+Head-tag composition is a list of functions that return forms. Because the
+head is data, a site can build, filter, and test it.
+
+Emitters are functions from a site to output files. Four emitters ship:
+an Atom feed, `sitemap.xml`, `robots.txt`, and one `/tags/` page.
+
+The feed contains articles, not sections. A page with children is an index of
 other pages.
 
-The feed, the sitemap, the canonical link and the Open Graph tags are absent
-from a site with no `:base-url`. There is no valid feed with relative entry
-ids, and emitting a broken one is worse than emitting none.
+If a site has no `:base-url`, anchor does not emit a feed, sitemap canonical
+link, or Open Graph tags. There is no valid feed with relative entry IDs.
+Emitting a broken feed is worse than emitting none.
 
 === References and media
 
-Every link and image is resolved once, before anything renders, and the
-resolved target is written back onto the node. Nothing rewrites the output.
+anchor resolves each link and image once before rendering. It writes the
+resolved target back onto the node. It does not rewrite rendered output.
 
-Resolving a relative target walks up from the page's own directory to the
-root, so colocated media is found on the first step and `_media/` on a later
-one. Colocation and shared assets are not two rules.
+A relative target is resolved from the page's directory upward to the site
+root. Colocated media is found first. `_media/` is found later. Colocated and
+shared assets therefore use one rule, not two.
 
 === Commands
 
-`anchor build`, `anchor serve` and `anchor check`. `check` reports what is
-missing, undated, orphaned, duplicated, what each page weighs, and what every
-reference resolved to, and exits non-zero when a site is wrong.
+anchor ships three commands:
 
-`serve` keeps the graph in the image on its own thread, so the REPL that
-started it stays usable and a recompiled layout shows up on the next request.
-It speaks enough HTTP to serve a directory to a browser on loopback and no
-more.
+----
+anchor build
+anchor serve
+anchor check
+----
+
+`check` reports missing references, undated pages, orphaned files, duplicate
+content, page weight, and reference resolutions. It exits non-zero when the
+site is wrong.
+
+`serve` keeps the graph in the Lisp image on its own thread. The REPL that
+started it stays usable. A recompiled layout appears on the next request.
+
+The server speaks enough HTTP to serve a directory to a browser on loopback.
+It does no more.
 
 === Known limits
 
-A stylesheet is named by a layout rather than by a document, so `check`
+A stylesheet is named by a layout, not by a document. `check` therefore
 reports it as an orphan. The reference relation covers what documents point
-at, which is why orphans are reported and never deleted.
+at. Orphans are reported and never deleted.
 
-anchor needs cl-adoc 0.2.0 or later, for description lists.
+anchor needs cl-adoc 0.2.0 or later for description lists.

@@ -1,24 +1,28 @@
 ;;;; The default layout.
 ;;;;
-;;;; A layout is a function of a page and a site returning an HTML tree. There
-;;;; is no template language; Common Lisp is the template language, and a user
-;;;; who wants a different layout writes a different function.
+;;;; A layout is a function from a page and a site to an HTML tree.
 ;;;;
-;;;; What ships here emits semantic, class-light HTML. That is an obligation
-;;;; rather than a preference: a stylesheet alone has to be able to restyle
-;;;; the site completely, so if a default layout needs a wrapper element and a
-;;;; class on every node, the layout is wrong.
+;;;; There is no template language. Common Lisp is the template language. A
+;;;; user who wants a different layout writes a different function.
 ;;;;
-;;;; A layout that renders one page in isolation ignores the site. The ones
-;;;; that list other pages are why the argument is there.
+;;;; The default layout emits semantic, class-light HTML. This is a rule, not a
+;;;; preference. A stylesheet alone must be able to restyle the site
+;;;; completely.
+;;;;
+;;;; If a default layout needs a wrapper element and a class on every node, the
+;;;; layout is wrong.
+;;;;
+;;;; Some layouts render one page and ignore the site. Layouts that list other
+;;;; pages need the site argument.
 
 (in-package #:anchor)
 
 (defun head-title (page site)
-  "The text of PAGE's title element.
-The page's own title, qualified by the site's when the two differ. The root
-page is usually named after the site, and repeating that name twice in a
-browser tab helps nobody."
+  "Return PAGE's title text for the HTML title element.
+
+Qualify PAGE's title with the site title when the two differ. The root page is
+usually named after the site. Repeating that name twice in a browser tab is
+not useful."
   (let ((page-title (page-title page))
         (site-title (getf (site-config site page) :title)))
     (cond ((null site-title) page-title)
@@ -28,12 +32,14 @@ browser tab helps nobody."
 
 ;;; Head tags
 ;;;
-;;; A list of functions of a page and a site, each returning a form, a list of
-;;; forms, or NIL. The same shape as the emitter list and for the same reason:
-;;; a list is something a site can add to, filter, or replace outright, and
-;;; none of the members has to know about any other.
+;;; *HEAD-TAGS* is a list of functions. Each function takes a page and a site.
+;;; Each function returns a form, a list of forms, or NIL.
 ;;;
-;;; This list and the emitter list are the whole of anchor's answer to search
+;;; This has the same shape as the emitter list and exists for the same reason:
+;;; a site can add to the list, filter it, or replace it. No member has to know
+;;; about any other member.
+;;;
+;;; The head-tag list and emitter list are anchor's full answer to search
 ;;; engines and social previews. There is no SEO feature behind them.
 
 (defun head-charset (page site)
@@ -45,8 +51,10 @@ browser tab helps nobody."
   '(:meta :name "viewport" :content "width=device-width, initial-scale=1"))
 
 (defun head-color-scheme (page site)
-  "Light and dark are the stylesheet's business.
-anchor says the page supports both and ships no toggle and no JavaScript."
+  "Return the color-scheme meta tag.
+
+Light and dark mode belong to the stylesheet. anchor says the page supports
+both. It ships no toggle and no JavaScript."
   (declare (ignore page site))
   '(:meta :name "color-scheme" :content "light dark"))
 
@@ -64,9 +72,12 @@ anchor says the page supports both and ships no toggle and no JavaScript."
     (when url `(:link :rel "canonical" :href ,url))))
 
 (defun head-open-graph (page site)
-  "Open Graph, which is what a link to this page looks like elsewhere.
-Absent entirely without a :base-url, since every useful member of it is an
-absolute URL and a card built on relative ones is worse than no card."
+  "Return Open Graph tags for PAGE.
+
+Open Graph controls how links to this page appear elsewhere.
+
+Return NIL when SITE has no :base-url. Useful Open Graph values are absolute
+URLs. A card built on relative URLs is worse than no card."
   (let ((url (absolute-url site (page-url page))))
     (when url
       (let ((description (page-description page))
@@ -87,7 +98,9 @@ absolute URL and a card built on relative ones is worse than no card."
                                 :content ,(page-date page)))))))))
 
 (defun head-twitter (page site)
-  "A summary card. anchor knows of no image to promote it to a larger one."
+  "Return Twitter card tags for PAGE.
+
+anchor knows of no image to promote the card to a large summary card."
   (declare (ignore site))
   (let ((description (page-description page)))
     (remove nil
@@ -110,44 +123,50 @@ absolute URL and a card built on relative ones is worse than no card."
         #'head-open-graph
         #'head-twitter
         #'head-stylesheet)
-  "The functions that build a page's head, in order.
-Replace the list to replace the head, or remove a member to drop what it
+  "Functions that build a page head, in order.
+
+Replace the list to replace the head. Remove a member to drop what it
 contributes.")
 
 (defun head-tags (page site)
-  "The contents of PAGE's head, as a list of element forms."
+  "Return PAGE's head contents as element forms."
   (loop for tag in *head-tags*
         for form = (funcall tag page site)
         when form collect form))
 
 (defun article (page site)
-  "PAGE as an article: title, date, body, in that order."
+  "Return PAGE as an article: title, date, body."
   (declare (ignore site))
   `(:article
     (:h1 ,(page-title page))
-    ;; No byline. On a single-author site it is noise, and the date is what a
-    ;; reader needs to judge whether a technical post is still true.
+    ;; No byline. On a single-author site it is noise. The date is what a
+    ;; reader needs to decide whether a technical post is still true.
     ,(when (page-date page)
        `(:p :class "meta"
             (:time :datetime ,(page-date page) ,(page-date-human page))))
     (:raw ,(page-body-html page))))
 
 (defun index-row (page)
-  "One row of an index: a linked title and a date, and nothing else.
-A dated list of titles is the densest useful form an index can take, so
-nothing else goes in one."
+  "Return one index row: linked title and optional date.
+
+A dated list of titles is the densest useful index. Nothing else belongs in a
+row."
   `(:li (:a :href ,(page-url page) ,(page-title page))
-        ;; The separator is in the markup rather than left to the stylesheet.
-        ;; A stylesheet has to be able to restyle the page completely; it does
-        ;; not have to be present for the page to read.
+        ;; Put the separator in markup, not CSS. A stylesheet must be able to
+        ;; restyle the page completely. It must not be required for the page to
+        ;; read correctly.
         ,@(when (page-date page)
             `(" " (:time :datetime ,(page-date page) ,(page-date-human page))))))
 
 (defun front-page (page site)
-  "The site index: the newest page with its excerpt, then the rest as a list.
-Full articles are not repeated here. Beyond page weight, cl-adoc gives
-headings deterministic ids, so two whole articles in one document would
-produce duplicate element ids. An excerpt cannot."
+  "Return the site index.
+
+It shows the newest page with its excerpt, then the rest as a list.
+
+Full articles are not repeated here. Page weight is one reason. Duplicate
+heading IDs are another. cl-adoc gives headings deterministic IDs, so two
+whole articles on one page can produce duplicate element IDs. Excerpts avoid
+that."
   (let* ((listed (remove page (site-chronology site)))
          (newest (first listed))
          (remaining (rest listed)))
@@ -166,21 +185,22 @@ produce duplicate element ids. An excerpt cannot."
          `(:nav (:ul ,@(mapcar #'index-row remaining)))))))
 
 (defun site-footer (page site)
-  "The site footer, or NIL when there is nothing to put in one.
-This is where the author goes. A byline on every article is noise on a
-single-author site, and the date is what a reader needs there instead."
+  "Return the site footer, or NIL when it would be empty.
+
+The footer is where the author belongs. On a single-author site, a byline on
+every article is noise. The date is more useful there."
   (let ((author (getf (site-config site page) :author)))
     (when author
       `(:footer (:p ,author)))))
 
 (defun page-shell (page site body)
-  "The whole document around BODY."
+  "Return the complete HTML tree around BODY."
   `(:html :lang "en"
           (:head ,@(head-tags page site))
           (:body ,body ,(site-footer page site))))
 
 (defun render-document (tree)
-  "TREE as a complete HTML document, doctype and all."
+  "Return TREE as a complete HTML document, including doctype."
   (with-output-to-string (out)
     (write-line "<!DOCTYPE html>" out)
     (serialize tree out)))

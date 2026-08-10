@@ -3,8 +3,8 @@
 :tags: lisp, testing
 :description: A post that says what it is about.
 
-Older than the first post, so chronology has something to order. Its
-preamble is these two paragraphs, which is what an excerpt is made of.
+This page is older than the first post, so chronology has something to order.
+Its preamble is these two paragraphs. The excerpt uses the preamble.
 
 A second preamble paragraph, before any heading.
 
@@ -12,12 +12,12 @@ A second preamble paragraph, before any heading.
 
 Everything from here down is past the preamble and out of the excerpt.
 
-Shared media is found further up the walk, in the root's `_media/`:
+Shared media is found farther up the walk, in the root `_media/` directory:
 
 image::_media/portrait.svg[A portrait]
 
-A relative link to link:../first-post/[the first post], which resolves
-against this page's own URL.
+A relative link to link:../first-post/[the first post] resolves against this
+page's own URL.
 
-Mathematics, so that the document has something to answer about itself:
+This page contains mathematics, so the document can report that fact:
 stem:[a^2 + b^2 = c^2].

@@ -1,7 +1,8 @@
-;;;; A layout chosen by configuration.
+;;;; A layout selected by configuration.
 ;;;;
-;;;; The forms before the last one are evaluated too, which is what lets a
-;;;; site define the layout function that :layout then names. This one
-;;;; borrows a layout anchor already ships.
+;;;; Forms before the last one are evaluated too. That lets a site define the
+;;;; layout function that :layout names.
+;;;;
+;;;; This fixture uses a layout that anchor already ships.
 
 (list :layout 'anchor:front-page)

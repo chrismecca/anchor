@@ -2,7 +2,7 @@ ocicl/
 
 _site/
 
-# The executable make bin dumps into the project root.
+# Executable dumped into the project root by make bin.
 /anchor
 
 *.fasl

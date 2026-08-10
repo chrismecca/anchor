@@ -1,7 +1,10 @@
 ;;;; Configuration for the whole sample site.
 ;;;;
-;;;; Every form is evaluated and the value of the last one is the plist, so
-;;;; the configuration is built with LIST rather than written as a literal.
+;;;; Every form is evaluated. The value of the last form is the configuration
+;;;; plist.
+;;;;
+;;;; This fixture uses LIST instead of a literal plist to show that evaluation
+;;;; happens.
 
 (list :title    "A Sample Site"
       :author   "A Person"

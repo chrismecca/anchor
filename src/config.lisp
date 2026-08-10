@@ -1,28 +1,30 @@
 ;;;; The configuration cascade.
 ;;;;
-;;;; An _anchor.lisp in any directory configures that directory and everything
-;;;; beneath it, merged parent to child, so a subdirectory overrides its
-;;;; ancestors and no central registry expresses that it does.
+;;;; An _anchor.lisp in any directory configures that directory and every
+;;;; directory below it. Configuration is merged parent to child, so a
+;;;; subdirectory can override its ancestors without a central registry.
 ;;;;
-;;;; The file is evaluated rather than read as data, so the forms before the
-;;;; last one can do something -- defining the layout function that the last
-;;;; one's :layout key goes on to name. That is why this is a Lisp file and
-;;;; not an ini file, and it means anchor runs code out of the source tree.
-;;;; The source tree is assumed to be the user's own. anchor is not a sandbox
-;;;; and does not try to be one.
+;;;; The file is evaluated instead of read as data. Earlier forms can therefore
+;;;; do work, such as defining the layout function named by the final plist's
+;;;; :layout key.
 ;;;;
-;;;; This is also the cascade that _media/ resolution uses. There is one such
-;;;; rule in anchor and both things are meant to walk by it.
+;;;; That is why this is a Lisp file, not an ini file. It also means anchor
+;;;; runs code from the source tree. The source tree is assumed to be the
+;;;; user's own. anchor is not a sandbox and does not try to be one.
+;;;;
+;;;; _media/ resolution uses the same cascade. anchor has one cascade rule, and
+;;;; both configuration and shared media use it.
 
 (in-package #:anchor)
 
 (defparameter *config-file* "_anchor.lisp"
-  "The name of a configuration file.")
+  "Name of a configuration file.")
 
 (defun load-config (path)
-  "Evaluate every form in PATH and return the value of the last one.
-*PACKAGE* is bound around the evaluation, so an IN-PACKAGE inside a
-configuration file affects that file and stops at its end."
+  "Evaluate every form in PATH and return the value of the last form.
+
+*PACKAGE* is bound during evaluation. An IN-PACKAGE form in a configuration
+file affects that file and stops at the file boundary."
   (handler-case
       (with-open-file (stream path)
         (let ((*package* *package*)
@@ -36,28 +38,33 @@ configuration file affects that file and stops at its end."
       (error 'unreadable-configuration :path path :cause cause))))
 
 (defun directory-config (directory)
-  "The configuration declared in DIRECTORY itself, ignoring its ancestors."
+  "Return the configuration declared in DIRECTORY.
+
+Ignore ancestor configuration."
   (let ((path (merge-pathnames *config-file* directory)))
     (when (probe-file path)
       (load-config path))))
 
 (defun config-keys (config)
-  "The keys of CONFIG, in the order they appear."
+  "Return the keys of CONFIG in source order."
   (loop for (key nil) on config by #'cddr collect key))
 
 (defun config-has-key-p (config key)
-  "Whether CONFIG names KEY at all.
-GETF cannot answer this, since a key present with a NIL value and a key that
-is absent both read back as NIL, and a configuration is allowed to set a key
-to NIL in order to switch off what an ancestor turned on."
+  "Return true when CONFIG contains KEY.
+
+GETF cannot answer this. A present key with a NIL value and an absent key both
+read back as NIL. Configuration can set a key to NIL to disable a value
+enabled by an ancestor."
   (not (null (get-properties config (list key)))))
 
 (defun merge-config (parent child)
-  "PARENT and CHILD merged, with CHILD winning where both name a key.
-The parent's key order is kept and keys the child introduces are appended in
-its own order, so merging the same two configurations always produces the
-same list. SETF GETF would be shorter and would put new keys at the front,
-which makes the result depend on which file happened to declare what."
+  "Merge PARENT and CHILD, with CHILD taking precedence.
+
+Keep the parent's key order. Append keys introduced by CHILD in CHILD's order.
+This makes the merge stable.
+
+SETF GETF would be shorter, but would put new keys at the front. Then the
+result would depend on which file happened to declare a key."
   (let ((keys '()))
     (dolist (key (config-keys parent)) (pushnew key keys))
     (dolist (key (config-keys child)) (pushnew key keys))
@@ -67,10 +74,11 @@ which makes the result depend on which file happened to declare what."
                                (getf parent key))))))
 
 (defun directory-configs (root)
-  "A table of directory namestring to merged configuration.
-Built by descending from ROOT and carrying what has accumulated so far, which
-is the cascade itself: a directory's configuration is its ancestors' with its
-own laid over the top."
+  "Return a table from directory namestring to merged configuration.
+
+The table is built by descending from ROOT and carrying the accumulated
+configuration. That is the cascade: each directory gets its ancestors'
+configuration with its own configuration laid over it."
   (let ((table (make-hash-table :test #'equal)))
     (labels ((walk (directory inherited)
                (let ((config (merge-config inherited

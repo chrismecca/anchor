@@ -1,23 +1,23 @@
-;;;; Serialising an XML tree.
+;;;; Serialize an XML tree.
 ;;;;
-;;;; The feed and the sitemap are XML, and they are built as trees and walked
-;;;; for the same reason the pages are. Assembling markup with format strings
-;;;; would put escaping back in the hands of whoever remembered to call it,
-;;;; which is the failure this whole project came out of.
+;;;; The feed and sitemap are XML. anchor builds them as trees and walks those
+;;;; trees for the same reason it walks page trees.
 ;;;;
-;;;; The form is the same as the HTML serialiser's, and the escaping is the
-;;;; same code. What differs is that XML has no void elements: every element
-;;;; either closes or closes itself, so there is no list of exceptions to
-;;;; keep in step with a standard.
+;;;; Building markup with format strings would put escaping back in the hands
+;;;; of each caller. That is the failure this project avoids.
+;;;;
+;;;; The form is the same shape as the HTML serializer form. Escaping uses the
+;;;; same code. XML differs because it has no void elements. Each element either
+;;;; closes itself or has a closing tag.
 
 (in-package #:anchor)
 
 (defun xml-declaration ()
-  "The declaration every document anchor emits begins with."
+  "Return the XML declaration used by generated XML documents."
   (format nil "<?xml version=\"1.0\" encoding=\"utf-8\"?>~%"))
 
 (defun serialize-xml-element (form stream)
-  "Write the element FORM to STREAM as XML."
+  "Write XML element FORM to STREAM."
   (let ((tag (first form))
         (rest (rest form)))
     (write-char #\< stream)
@@ -27,10 +27,10 @@
              (setf rest (cddr rest)))
     (setf rest (remove nil rest))
     (cond
-      ;; An element with nothing in it closes itself.
+      ;; An empty element closes itself.
       ((null rest)
        (write-string "/>" stream))
-      ;; One holding other elements puts each on its own line.
+      ;; An element that contains elements puts each one on its own line.
       ((some #'consp rest)
        (write-char #\> stream)
        (terpri stream)
@@ -38,7 +38,7 @@
          (serialize-xml child stream)
          (terpri stream))
        (format stream "</~a>" (element-name tag)))
-      ;; One holding only text stays on one line.
+      ;; An element that contains only text stays on one line.
       (t
        (write-char #\> stream)
        (dolist (child rest)
@@ -47,8 +47,9 @@
 
 (defun serialize-xml (form &optional stream)
   "Write FORM to STREAM as XML.
-Writes to STREAM when one is supplied and returns NIL; otherwise returns the
-XML as a string."
+
+When STREAM is supplied, write to it and return NIL. Otherwise return the XML
+as a string."
   (if stream
       (cond
         ((null form))

@@ -1,4 +1,4 @@
-;;;; Serialising XML trees.
+;;;; XML serialization tests.
 
 (in-package #:anchor/tests)
 
@@ -9,10 +9,10 @@
 
 (define-test (serialize-xml elements)
   (is string= "<title>text</title>" (xml '(:title "text"))
-      "An element holding only text stays on one line.")
+      "An element that contains only text stays on one line.")
   (is string= "<link/>" (xml '(:link))
-      "An element with nothing in it closes itself. XML has no void tags, so
-there is no list of exceptions to keep in step with.")
+      "An empty element closes itself. XML has no void tags, so there is no
+exception list to maintain.")
   (is string= "<link rel=\"self\" href=\"/feed.xml\"/>"
       (xml '(:link :rel "self" :href "/feed.xml"))))
 
@@ -22,20 +22,19 @@ there is no list of exceptions to keep in step with.")
 <id>x</id>
 </feed>"
       (xml '(:feed (:title "A Site") (:id "x")))
-      "An element holding other elements puts each on its own line.")
+      "An element that contains elements writes each child on its own line.")
   (is string= "<feed>
 <title>A Site</title>
 </feed>"
       (xml '(:feed (:title "A Site") nil))
-      "A NIL child is dropped rather than left as a blank line, so a layout
-can omit an element in place."))
+      "A NIL child is dropped. A layout can omit an element in place."))
 
 (define-test (serialize-xml escaping)
   (is string= "<summary>a &lt; b &amp;&amp; c &gt; d</summary>"
       (xml '(:summary "a < b && c > d")))
   (is string= "<summary>&lt;p&gt;markup&lt;/p&gt;</summary>"
       (xml '(:summary "<p>markup</p>"))
-      "HTML placed in an XML text node is escaped, which is what carrying an
-excerpt through a feed depends on.")
+      "HTML inside an XML text node is escaped. The feed depends on this when
+it carries an excerpt.")
   (is string= "<link href=\"?a=1&amp;b=2\"/>"
       (xml '(:link :href "?a=1&b=2"))))

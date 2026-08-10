@@ -1,4 +1,5 @@
 = Posts
 
-A section index with no date. It is the only child of the root, so there
-is no pattern here either.
+This section index has no date.
+
+It is the only child of the root, so there is no date pattern here either.

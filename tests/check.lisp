@@ -1,4 +1,4 @@
-;;;; Integrity checks.
+;;;; Integrity check tests.
 
 (in-package #:anchor/tests)
 
@@ -23,7 +23,7 @@
          (report (anchor:check root)))
     (is = 1 (length (anchor:report-missing report)))
     (false (anchor:report-passed-p report)
-           "A missing reference is the only thing that makes a site wrong.")
+           "A missing reference makes a site wrong.")
     (is string= "nonexistent.png"
         (anchor::reference-target (first (anchor:report-missing report))))))
 
@@ -31,30 +31,30 @@
   (let ((sound (checked))
         (forgotten (anchor:check (undated-fixture-site))))
     (is equal '() (anchor:report-undated sound)
-        "A root holding a dated posts/ and an undated about/ is not a dated
-section, so nothing there is asked for a date.")
+        "A root with a dated posts/ section and an undated about/ section is
+not a dated section. Nothing there needs a date.")
     (is = 1 (length (anchor:report-undated forgotten)))
     (is string= "/posts/three/"
         (anchor:page-url (first (anchor:report-undated forgotten)))
-        "Every other page in that section is dated, which is the moment a
-forgotten date is visible.")
+        "Every other page in that section is dated. That is when a forgotten
+date becomes visible.")
     (false (anchor:report-passed-p forgotten)
-           "A forgotten date makes a site wrong, the same as a broken link.")))
+           "A forgotten date makes a site wrong, like a broken link.")))
 
 (define-test (check orphans)
   (let* ((report (checked))
          (names (relative-names (anchor:report-site report)
                                 (anchor:report-orphans report))))
     (true (member "_media/unused.svg" names :test #'string=)
-          "A file nothing points at is reported, which is the whole reason
-_media/ is walked here even though discovery skips it.")
+          "A file that nothing points at is reported. That is why _media/ is
+walked here even though discovery skips it.")
     (true (member "_media/shared.txt" names :test #'string=))
     (false (member "_media/portrait.svg" names :test #'string=)
-           "What a page does point at is not an orphan.")
+           "A referenced file is not an orphan.")
     (false (member "posts/2026/first-post/diagram.svg" names :test #'string=))
     (true (member "style.css" names :test #'string=)
-          "A stylesheet is named by a layout rather than by a document, so it
-lands here too. That is why orphans are advice and never a deletion.")))
+          "A stylesheet is named by a layout, not by a document. It appears
+here too. That is why orphans are advice and never a deletion plan.")))
 
 (define-test (check duplicates)
   (let* ((report (checked))
@@ -65,7 +65,7 @@ lands here too. That is why orphans are advice and never a deletion.")))
     (is = 1 (length groups))
     (is equal '("about/diagram.svg" "posts/2026/first-post/diagram.svg")
         (first names)
-        "Identical content under different names, found by hash and then
+        "Identical content under different names is found by hash, then
 confirmed byte for byte.")))
 
 (define-test (check content-identity)
@@ -85,12 +85,12 @@ confirmed byte for byte.")))
     (is = (anchor::file-size (merge-pathnames "posts/2026/first-post/diagram.svg"
                                               (fixture-site)))
         (anchor:page-weight-assets post)
-        "A page weighs its own HTML plus the media it points at.")
+        "A page weighs its own HTML plus the media it references.")
     (is = (+ (anchor:page-weight-html post) (anchor:page-weight-assets post))
         (anchor:page-weight-total post))
     (true (>= (anchor:page-weight-total (first weights))
               (anchor:page-weight-total (car (last weights))))
-          "Heaviest first, which is the order that is useful.")))
+          "Heaviest first is the useful order.")))
 
 (define-test (check report-prints)
   (let ((text (with-output-to-string (out) (anchor:print-report (checked) out))))

@@ -1,11 +1,13 @@
 ;;;; Integrity checks.
 ;;;;
-;;;; Everything here is the reference relation read back, plus a walk and a
-;;;; hash table. That is the whole reason the relation exists: once a build
-;;;; knows what points at what, "is anything broken" and "is anything unused"
-;;;; stop being searches and become lookups.
+;;;; Most checks read the reference relation. The rest are a walk plus a hash
+;;;; table.
 ;;;;
-;;;; Nothing here deletes, moves, or rewrites. check reports and returns.
+;;;; That is why the relation exists. Once anchor knows what points at what,
+;;;; "is anything broken?" and "is anything unused?" become lookups instead of
+;;;; searches.
+;;;;
+;;;; check does not delete, move, or rewrite. It reports and returns.
 
 (in-package #:anchor)
 
@@ -13,7 +15,7 @@
 (defparameter *fnv-prime* 1099511628211)
 
 (defun file-bytes (path)
-  "The contents of PATH as a byte vector."
+  "Return the contents of PATH as a byte vector."
   (with-open-file (stream path :element-type '(unsigned-byte 8))
     (let ((bytes (make-array (file-length stream)
                              :element-type '(unsigned-byte 8))))
@@ -21,24 +23,28 @@
       bytes)))
 
 (defun file-size (path)
-  "The size of PATH in bytes."
+  "Return the size of PATH in bytes."
   (with-open-file (stream path :element-type '(unsigned-byte 8))
     (file-length stream)))
 
 (defun content-hash (path)
-  "A hash of PATH's contents, for identity only.
-FNV-1a, which is not cryptographic and does not need to be. It groups files
-that might be identical; the members of a group are then compared byte for
-byte, so a collision costs a comparison rather than a wrong answer. Hashes
-are for identity here and never for naming -- output filenames are stable,
-and permanent URLs are worth more than cache-busting."
+  "Return a content hash for PATH.
+
+The hash is for identity only. FNV-1a is not cryptographic and does not need
+to be.
+
+The hash groups files that might be identical. Files in a group are then
+compared byte for byte. A collision costs a comparison, not a wrong answer.
+
+Hashes are never used for output names. Output filenames are stable. Permanent
+URLs are worth more than cache busting."
   (let ((hash *fnv-offset*))
     (loop for byte across (file-bytes path)
           do (setf hash (ldb (byte 64 0) (* (logxor hash byte) *fnv-prime*))))
     hash))
 
 (defun partition-identical (paths)
-  "PATHS grouped so that every member of a group is byte for byte the same."
+  "Group PATHS by byte-for-byte equality."
   (let ((groups '()))
     (dolist (path paths)
       (let* ((bytes (file-bytes path))
@@ -49,7 +55,7 @@ and permanent URLs are worth more than cache-busting."
     (mapcar (lambda (cell) (nreverse (cdr cell))) (nreverse groups))))
 
 (defun duplicate-groups (paths)
-  "The groups of PATHS that hold identical content under different names."
+  "Return groups of PATHS with identical content under different names."
   (let ((by-hash (make-hash-table :test #'eql))
         (duplicates '()))
     (dolist (path paths)
@@ -64,17 +70,19 @@ and permanent URLs are worth more than cache-busting."
     duplicates))
 
 (defun all-directories (root)
-  "ROOT and every directory beneath it, output directories aside."
+  "Return ROOT and every directory below it, except output directories."
   (cons root
         (loop for sub in (uiop:subdirectories root)
               unless (string= "_site" (directory-name sub))
                 append (all-directories sub))))
 
 (defun checkable-files (root)
-  "Every file under ROOT that could be an asset.
-Reserved directories are walked here even though discovery skips them: a file
-sitting unused in _media/ is exactly the thing worth reporting. Documents and
-configuration are not assets and are not counted."
+  "Return files below ROOT that could be assets.
+
+Reserved directories are walked here even though discovery skips them. An
+unused file in _media/ is exactly the kind of thing worth reporting.
+
+Documents and configuration are not assets and are not counted."
   (loop for directory in (all-directories root)
         append (loop for file in (uiop:directory-files directory)
                      unless (or (string-equal "adoc" (pathname-type file))
@@ -82,17 +90,21 @@ configuration are not assets and are not counted."
                        collect file)))
 
 (defun orphan-files (site)
-  "Files that exist and that no document points at.
-Referenced by no *document*. A stylesheet named by a layout rather than by a
-page is the expected member of this list, which is part of why orphans are
-reported and never deleted: this list is advice, not an authority on what is
-unused."
+  "Return files that exist but no document references.
+
+This means referenced by no document. A stylesheet named by a layout instead
+of by a page is an expected orphan.
+
+That is why orphans are reported and never deleted. This list is advice, not
+authority over what is unused."
   (let ((referenced (mapcar #'truename (referenced-assets site))))
     (remove-if (lambda (path) (member (truename path) referenced :test #'equal))
                (checkable-files (site-root site)))))
 
 (defstruct (page-weight (:constructor make-page-weight (page html assets)))
-  "What one page costs a reader: its own bytes, and its media's."
+  "The bytes one page costs a reader.
+
+HTML is the page itself. ASSETS is referenced media."
   page
   html
   assets)
@@ -101,7 +113,7 @@ unused."
   (+ (page-weight-html weight) (page-weight-assets weight)))
 
 (defun page-weights (site)
-  "Every page's weight, heaviest first."
+  "Return page weights for SITE, heaviest first."
   (sort
    (loop for page in (site-pages site)
          for assets = (remove-duplicates
@@ -118,7 +130,7 @@ unused."
    #'> :key #'page-weight-total))
 
 (defstruct (report (:constructor %make-report))
-  "What check found."
+  "The result of a check run."
   site
   missing
   undated
@@ -127,9 +139,10 @@ unused."
   weights)
 
 (defun check (root &key drafts)
-  "Build the graph for ROOT and report on its integrity.
-Nothing is written. This is the same graph a build would use, read rather
-than rendered."
+  "Build the graph for ROOT and report on integrity.
+
+Nothing is written. check reads the same graph a build would use, but does
+not render or copy output."
   (let ((site (make-site root :drafts drafts)))
     (%make-report :site site
                   :missing (missing-references site)
@@ -139,10 +152,11 @@ than rendered."
                   :weights (page-weights site))))
 
 (defun report-passed-p (report)
-  "Whether REPORT found anything that makes a site wrong.
-A broken reference and a forgotten date do. An orphan and a duplicate are
-both things a person might have meant, so they are reported and count for
-nothing."
+  "Return true when REPORT found no site-breaking problems.
+
+Broken references and forgotten dates make a site wrong. Orphans and
+duplicates may be intentional, so they are reported but do not fail the
+report."
   (and (null (report-missing report))
        (null (report-undated report))))
 
@@ -188,7 +202,7 @@ nothing."
               (when (plusp (page-weight-assets weight))
                 (page-weight-assets weight))))
 
-    ;; The accounting for the one place anchor resolves a name by searching.
+    ;; This accounts for the one place anchor resolves a name by searching.
     (format stream "~&~%resolutions~%")
     (dolist (reference (site-references site))
       (when (reference-url reference)

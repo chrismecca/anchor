@@ -62,7 +62,7 @@
    #:page-body-html
    #:page-excerpt-html
 
-   ;; The site graph
+   ;; Site graph
    #:site
    #:site-p
    #:make-site

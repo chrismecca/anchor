@@ -2,17 +2,16 @@
 :date: 2026-08-05
 :tags: lisp, asciidoc
 
-A lead paragraph, which is what an excerpt will be made of once there is
-a front page to put one on.
+A lead paragraph. The front page uses it as the excerpt.
 
 == A section
 
-Body text with `code`, *bold*, and a character that means something to
-HTML: a < b.
+Body text with `code`, *bold*, and a character that means something in HTML:
+a < b.
 
-Media colocated with the page resolves on the first step of the walk:
+Page-local media resolves on the first step of the walk:
 
 image::diagram.svg[A diagram]
 
-A link to link:/posts/2026/second-post/[the second post], and one to
+A link to link:/posts/2026/second-post/[the second post], and a link to
 link:https://example.org/elsewhere[somewhere outside the site].

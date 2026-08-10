@@ -11,30 +11,30 @@
 `"8bbdP"Y8 88       88  `"Ybbd8"' 88       88  `"YbbdP"'  88
 ----
 
-anchor is a static site generator for AsciiDoc, written in Common Lisp and
-built on cl-adoc.
+anchor is a static site generator for AsciiDoc. It is written in Common Lisp
+and built on cl-adoc.
 
-Its one distinguishing commitment is that the build operates on documents
-rather than on strings. cl-adoc parses a document into a tree; anchor uses
-the tree. Titles, dates, excerpts, headings and link targets are read from
-the parsed document, never recovered from rendered HTML and never repeated
-into a parallel block of front matter.
+The build operates on documents, not on strings. cl-adoc parses a document
+into a tree. anchor uses the tree. Titles, dates, excerpts, headings, and link
+targets come from the parsed document. They are not recovered from rendered
+HTML. They are not repeated in front matter.
 
-Several things follow from that and are not separate features. There is no
-front matter, because the document is the metadata. There is no excerpt
-marker, because an excerpt is a subtree. Nothing regexes the output, because
-a reference is resolved on the node before anything renders. Checking that
-every link and image target exists is a walk of the tree rather than a parse
-of the result.
+This gives anchor several rules:
 
-The second commitment is thinness. anchor should be readable in an afternoon,
-and where a feature can be replaced by a convention, the convention wins.
+* No front matter. The document is the metadata.
+* No excerpt marker. An excerpt is a subtree.
+* No regex pass over rendered output. References are resolved on nodes before
+  rendering.
+* Link and image checks walk the document tree. They do not parse rendered
+  HTML.
+
+The second rule is thinness. anchor should be readable in an afternoon. When a
+convention can replace a feature, the convention wins.
 
 == The shape of a site
 
-The filesystem is the data model. A directory holding an `index.adoc` is a
-page, and its path is its URL. There is no permalink configuration and no
-slug field.
+The filesystem is the data model. A directory with `index.adoc` is a page. Its
+path is its URL. There is no permalink configuration and no slug field.
 
 ----
 mysite/
@@ -49,14 +49,15 @@ mysite/
   style.css
 ----
 
-That makes a section a first-class thing without configuring one: `posts/`
-is both a page and the parent of pages, and nothing declares that
-relationship.
+A section is therefore a first-class object without configuration. `posts/` is
+both a page and the parent of pages. Nothing declares that relationship.
 
-A file or directory whose name begins with an underscore is reserved and is
-never written to the output. `_anchor.lisp` configures its directory and
-everything below it, merged parent to child. `_media/` holds assets shared
-by a subtree, and the referenced ones are copied.
+A file or directory whose name starts with `_` is reserved and is not written
+to the output. `_anchor.lisp` configures its directory and everything below
+it. Configuration is merged parent to child.
+
+`_media/` holds assets shared by a subtree. Referenced files inside `_media/`
+are copied.
 
 == Using it
 
@@ -66,14 +67,15 @@ anchor serve [DIR] [--output DIR] [--port N]
 anchor check [DIR] [--drafts]
 ----
 
-`build` writes the site to `_site/`. `check` reports what is missing, what
-is unused, what is duplicated, what each page weighs, and what every
-reference resolved to; it exits non-zero when something is wrong, which is
-what CI reads. `serve` builds, serves, includes drafts, and rebuilds when
-the source changes.
+`build` writes the site to `_site/`.
 
-`serve` keeps the site graph in the image, which is the reason this is
-written in Lisp:
+`check` reports missing references, unused files, duplicate content, page
+weight, and reference resolutions. It exits non-zero when something is wrong.
+That is what CI reads.
+
+`serve` builds, serves, includes drafts, and rebuilds when the source changes.
+
+`serve` keeps the site graph in the Lisp image:
 
 [source,lisp]
 ----
@@ -83,14 +85,14 @@ written in Lisp:
 (anchor:rebuild-page "posts/2026/anchor-design")
 ----
 
-Recompile a layout at the REPL and the next request uses it. That is not a
-hot-reload feature; it is what having an image gets you.
+Recompile a layout at the REPL and the next request uses it. This is not a
+hot-reload feature. It is what having an image gives you.
 
 == Layouts
 
-A layout is a function of a page and a site returning an HTML tree as
-s-expressions. There is no template language, because Common Lisp is the
-template language.
+A layout is a function from a page and a site to an HTML tree as
+s-expressions. There is no template language. Common Lisp is the template
+language.
 
 [source,lisp]
 ----
@@ -104,24 +106,27 @@ template language.
     (:raw ,(anchor:page-body-html page))))
 ----
 
-`(:raw ...)` inserts rendered HTML without escaping and is the only escape
-hatch. Layouts are selected by the `:layout` key, so they inherit through the
-same cascade as everything else.
+`(:raw ...)` inserts rendered HTML without escaping. It is the only escape
+hatch.
+
+Layouts are selected by the `:layout` key. They inherit through the same
+cascade as every other configuration value.
 
 Emitters and head tags are ordinary lists of ordinary functions. The Atom
-feed, `sitemap.xml`, `robots.txt` and the `/tags/` page are four functions in
-`anchor:*emitters*`, and a site that wants a fifth writes one.
+feed, `sitemap.xml`, `robots.txt`, and `/tags/` page are functions in
+`anchor:*emitters*`. A site that wants a fifth emitter writes one.
 
 == What it does not do
 
-anchor has no plugin system, no theme format, no asset pipeline, no image
-processing, no shortcodes, and no deployment step. A theme is a CSS file and
-optionally a layout function. anchor produces a directory; getting it onto a
-host is rsync, git, or a CI job.
+anchor has no plugin system, theme format, asset pipeline, image processing,
+shortcodes, or deployment step.
 
-SPEC.adoc lists all of this, with the reasoning, and marks each section as
-shipped in 1.0, deferred, or refused outright. It is the contract, and it is
-kept honest: anchor renders its own specification.
+A theme is a CSS file and, optionally, a layout function. anchor produces a
+directory. rsync, git, or CI can put that directory on a host.
+
+SPEC.adoc lists the full scope and the reasoning behind it. Each section is
+marked as shipped in 1.0, deferred, or refused. It is the contract, and anchor
+keeps it honest by rendering its own specification.
 
 == Building it
 
@@ -132,8 +137,8 @@ make repl    # load the system into a REPL
 ----
 
 anchor needs SBCL and ocicl. It is built and tested against the SBCL versions
-Ubuntu packages in 24.04 and 26.04, which is 2.2.9 and 2.6.0. Other
-implementations are untested rather than unsupported.
+packaged by Ubuntu 24.04 and 26.04: 2.2.9 and 2.6.0. Other implementations are
+untested, not unsupported.
 
 Dependencies come from ocicl, at the digests pinned in `ocicl.csv`:
 
@@ -141,27 +146,31 @@ Dependencies come from ocicl, at the digests pinned in `ocicl.csv`:
 ocicl install
 ----
 
-anchor needs cl-adoc 0.2.0 or later, for description lists.
+anchor needs cl-adoc 0.2.0 or later for description lists.
 
 == A note on trust
 
-anchor loads and evaluates `_anchor.lisp` from the source tree. That is what
-lets a site define its own layout functions, and it means the source tree is
-assumed to be yours. anchor is not a sandbox and does not attempt to be one.
+anchor loads and evaluates `_anchor.lisp` from the source tree. This lets a
+site define its own layout functions.
+
+It also means the source tree is assumed to be yours. anchor is not a sandbox
+and does not try to be one.
 
 == Stability
 
 anchor is finished.
 
-That is not a way of saying it is abandoned. The scope was finite and written
-down before the code existed: every section SPEC.adoc marks `v1`, and nothing
-else. All of them shipped in 1.0, so the freeze is now in force. anchor takes
-bug fixes and whatever it takes to track cl-adoc's released interface, and the
-Lisp interface is settled on the same terms. Sections marked `later` are not
-promises, and sections marked `non-goal` are permanent.
+That does not mean abandoned. The scope was finite and written down before the
+code existed: every section SPEC.adoc marks `v1`, and nothing else. All of
+those sections shipped in 1.0, so the freeze is now in force.
 
-A tool that does a known amount and then stops is the point rather than a
-compromise.
+anchor takes bug fixes and changes required to track cl-adoc's released
+interface. The Lisp interface is settled on the same terms.
+
+Sections marked `later` are not promises. Sections marked `non-goal` are
+permanent.
+
+A tool that does a known amount and then stops is the point, not a compromise.
 
 == License
 

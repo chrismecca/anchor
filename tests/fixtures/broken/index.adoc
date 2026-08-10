@@ -1,7 +1,9 @@
-= A Site With A Broken Reference
+= A Site with a Broken Reference
 :date: 2026-04-01
 
-A separate fixture, because a broken reference in the sample site would
-fail every test that builds it. One page, one bad target.
+This fixture is separate from the sample site.
+
+A broken reference in the sample site would fail every test that builds it.
+This fixture has one page and one bad target.
 
 image::nonexistent.png[Not there]

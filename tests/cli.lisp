@@ -1,4 +1,4 @@
-;;;; The command line.
+;;;; Command-line tests.
 
 (in-package #:anchor/tests)
 
@@ -6,9 +6,10 @@
 
 (defun run-cli (&rest arguments)
   "Run ARGUMENTS through the command line.
-Returns the exit code, what went to standard output, and what went to error
-output. RUN returns a code rather than quitting, which is what makes this
-possible at all."
+
+Return three values: exit code, standard output, and error output.
+
+RUN returns a code instead of quitting. That is what makes this testable."
   (let* ((errors (make-string-output-stream))
          (code nil)
          (out (with-output-to-string (stream)
@@ -31,9 +32,9 @@ possible at all."
 (define-test (cli unknown)
   (multiple-value-bind (code stdout stderr) (run-cli "frobnicate")
     (declare (ignore stdout))
-    (is = 2 code "An unusable command line exits 2, apart from a failed run.")
+    (is = 2 code "An invalid command line exits 2. A failed run exits 1.")
     (true (search "unknown command frobnicate" stderr))
-    (true (search "usage:" stderr) "And says what the usable ones are."))
+    (true (search "usage:" stderr) "The error output also shows usage."))
   (multiple-value-bind (code stdout stderr) (run-cli "build" "--nonsense")
     (declare (ignore stdout))
     (is = 2 code)
@@ -42,17 +43,16 @@ possible at all."
     (declare (ignore stdout))
     (is = 2 code)
     (true (search "--output needs a directory" stderr)
-          "An option that swallowed its value is caught rather than treated
-as though it were absent.")))
+          "An option with no value is caught instead of treated as absent.")))
 
 (define-test (cli check-exit-codes)
   (multiple-value-bind (code stdout)
       (run-cli "check" (namestring (fixture-site)))
     (is = 0 code "A sound site exits 0.")
-    (true (search "resolutions" stdout) "And the report goes to stdout."))
+    (true (search "resolutions" stdout) "The report goes to stdout."))
   (multiple-value-bind (code stdout)
       (run-cli "check" (namestring (broken-fixture-site)))
-    (is = 1 code "A broken reference exits non-zero, which is what CI reads.")
+    (is = 1 code "A broken reference exits non-zero. CI reads this.")
     (true (search "nonexistent.png" stdout))))
 
 (define-test (cli build)
@@ -75,14 +75,14 @@ as though it were absent.")))
                (run-cli "build" (namestring (broken-fixture-site))
                         "--output" (namestring target))
              (declare (ignore stdout))
-             (is = 1 code "A build stops on a broken reference, because the
-command line runs :strict where there is no debugger to stop at.")
+             (is = 1 code "A build stops on a broken reference. The command
+line uses :strict because there is no debugger to stop in.")
              (true (search "nonexistent.png" stderr)))
            (multiple-value-bind (code) (run-cli "build"
                                                 (namestring (broken-fixture-site))
                                                 "--output" (namestring target)
                                                 "--force")
-             (is = 0 code "--force reports and carries on.")
+             (is = 0 code "--force reports problems and continues.")
              (true (read-output target "index.html"))))
       (uiop:delete-directory-tree target :validate t
                                          :if-does-not-exist :ignore))))
@@ -90,6 +90,6 @@ command line runs :strict where there is no debugger to stop at.")
 (define-test (cli missing-directory)
   (multiple-value-bind (code stdout stderr) (run-cli "check" "/no/such/place/")
     (declare (ignore stdout))
-    (is = 1 code "A directory that is not there is an ordinary failure.")
+    (is = 1 code "A missing directory is an ordinary failure.")
     (true (plusp (length stderr))
-          "And it says so rather than showing a backtrace.")))
+          "The command reports the problem instead of showing a backtrace.")))

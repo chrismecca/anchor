@@ -6,8 +6,9 @@
   :license "MIT"
   :version "1.0.1"
   :homepage "https://github.com/chrismecca/anchor"
-  ;; sb-bsd-sockets is an SBCL contrib rather than a dependency to fetch. The
-  ;; development server is the only thing that uses it.
+  ;; sb-bsd-sockets is an SBCL contrib. It is not fetched as a dependency.
+  ;;
+  ;; Only the development server uses it.
   :depends-on ("cl-adoc" (:require "sb-bsd-sockets"))
   :build-operation "program-op"
   :build-pathname "anchor"

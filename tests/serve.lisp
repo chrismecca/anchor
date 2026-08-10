@@ -1,11 +1,13 @@
-;;;; The development server.
+;;;; Development server tests.
 
 (in-package #:anchor/tests)
 
 (define-test serve)
 
 (defun http-get (port target)
-  "Make one request and return the status line, the headers, and the body."
+  "Make one request.
+
+Return three values: status line, headers, and body."
   (let ((socket (make-instance 'sb-bsd-sockets:inet-socket
                                :type :stream :protocol :tcp)))
     (unwind-protect
@@ -48,7 +50,7 @@
      (unwind-protect
           (progn
             (uiop:collect-sub*directories (fixture-site) t t (constantly t))
-            ;; A copy, because serving builds into the tree and the fixture
+            ;; Serve a copy. The server builds into the tree, and the fixture
             ;; is checked in.
             (copy-tree-to (fixture-site) source)
             (setf ,server (anchor:serve source :port 0))
@@ -102,30 +104,30 @@
     (multiple-value-bind (status)
         (http-get (anchor:server-port server) "/../../../etc/passwd")
       (true (search "404" status)
-            "A target that climbs out of the tree is never the request that
-was meant, loopback or not."))))
+            "A target that escapes the tree is not a valid request, even on
+loopback."))))
 
 (define-test (serve no-caching)
   (with-server (server)
     (multiple-value-bind (status head) (http-get (anchor:server-port server) "/")
       (declare (ignore status))
       (true (search "no-store" head)
-            "A cached response would hide the rebuild that just happened."))))
+            "A cached response would hide the rebuild that just ran."))))
 
 (define-test (serve includes-drafts)
   (with-server (server)
     (multiple-value-bind (status) (http-get (anchor:server-port server)
                                             "/posts/2026/a-draft/")
       (true (search "200" status)
-            "serve includes drafts, which is the point of previewing one at
-the URL it will keep."))))
+            "serve includes drafts. That lets a draft be previewed at the URL
+it will keep."))))
 
 (define-test (serve holds-the-graph)
   (with-server (server)
     (true (anchor:server-port server))
     (true (anchor:page "posts/2026/first-post")
-          "The graph is in the image and answers while the server runs, with
-whatever slashes get typed at a prompt.")
+          "The graph is in the image while the server runs. PAGE accepts the
+slashes a person is likely to type at a prompt.")
     (is string= "The First Post" (anchor:page-title
                                   (anchor:page "/posts/2026/first-post/")))
     (false (anchor:page "posts/nothing-here"))))
@@ -137,8 +139,8 @@ whatever slashes get typed at a prompt.")
           (http-get (anchor:server-port server) "/about/")
         (declare (ignore status head))
         (true (search "<h1>About</h1>" body)))
-      ;; Edit the source, then ask again. Nothing watches; the next request
-      ;; notices the file is newer than the build.
+      ;; Edit the source and request the page again. Nothing watches files.
+      ;; The next request notices that the file is newer than the build.
       (sleep 1.1)
       (with-open-file (out (merge-pathnames "about/index.adoc" source)
                            :direction :output :if-exists :supersede)
@@ -147,4 +149,4 @@ whatever slashes get typed at a prompt.")
           (http-get (anchor:server-port server) "/about/")
         (declare (ignore status head))
         (true (search "<h1>About, Rewritten</h1>" body)
-              "The next request rebuilt and served the edit.")))))
+              "The next request rebuilt the site and served the edit.")))))

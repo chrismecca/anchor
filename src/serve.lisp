@@ -1,31 +1,46 @@
 ;;;; The development server.
 ;;;;
-;;;; This exists so that the graph stays in the image. The listener runs in
-;;;; its own thread and the REPL that started it stays usable, so a layout can
-;;;; be recompiled and the next request picks it up, (page "posts/2026/x")
-;;;; answers from the live graph, and re-rendering one page is a function
-;;;; call. That is not a hot-reload feature; it is what having an image gets
-;;;; you, and the spec records it so that it does not get designed away.
+;;;; This exists so the graph stays in the Lisp image.
 ;;;;
-;;;; It speaks enough HTTP to serve a static directory to a browser on
-;;;; localhost, and no more. What it deliberately does not do:
+;;;; The listener runs in its own thread. The REPL that started it stays usable.
+;;;; A layout can be recompiled, and the next request uses it.
+;;;;
+;;;; (page "posts/2026/x") reads from the live graph. Re-rendering one page is
+;;;; a function call.
+;;;;
+;;;; This is not a hot-reload feature. It is what having an image gives you.
+;;;; The specification records it so it does not get designed away.
+;;;;
+;;;; The server speaks enough HTTP to serve a static directory to a browser on
+;;;; localhost. It does no more.
+;;;;
+;;;; It deliberately does not:
 ;;;;
 ;;;;   - listen anywhere but 127.0.0.1
-;;;;   - keep a connection alive, or handle more than one at a time
-;;;;   - range requests, compression, conditional requests, HTTPS
+;;;;   - keep connections alive
+;;;;   - handle more than one connection at a time
+;;;;   - support range requests
+;;;;   - support compression
+;;;;   - support conditional requests
+;;;;   - support HTTPS
 ;;;;
-;;;; Those are the reasons this is a hundred lines rather than a dependency
-;;;; on a web server. Serving one directory over loopback to one developer is
-;;;; a smaller problem than the libraries that solve it in general, and the
-;;;; cost of the general solution here is a dozen transitive dependencies for
-;;;; a program whose output is files. This is a different judgement from the
-;;;; HTML serialiser's -- that one was structural, layouts being data. This
-;;;; one is only proportion, and it would be reasonable to decide otherwise.
+;;;; That is why this is a small file instead of a dependency on a web server.
+;;;; Serving one directory over loopback to one developer is a smaller problem
+;;;; than the general libraries solve.
+;;;;
+;;;; The cost of a general server here would be many transitive dependencies
+;;;; for a program whose output is files.
+;;;;
+;;;; This differs from the HTML serializer decision. The serializer decision is
+;;;; structural: layouts are data. This decision is proportional. It would be
+;;;; reasonable to choose differently.
 
 (in-package #:anchor)
 
 (defparameter *site* nil
-  "The site the running server holds. Bound for the REPL to read.")
+  "The site currently held by the running server.
+
+The REPL can read this value.")
 
 (defparameter *server-root* nil)
 (defparameter *server-output* nil)
@@ -45,50 +60,56 @@
     ("xml"  . "application/xml")
     ("json" . "application/json")
     ("txt"  . "text/plain; charset=utf-8"))
-  "Enough types for what anchor emits and what a personal site carries.")
+  "Content types for what anchor emits and what a personal site commonly has.")
 
 (defun content-type (path)
   (or (cdr (assoc (pathname-type path) *content-types* :test #'string-equal))
       "application/octet-stream"))
 
-;;; The site in the image
+;;; Site state in the image
 
 (defun page (url)
-  "The page at URL in the site currently held, for use at the REPL.
-URL is forgiving about its slashes, so that what gets typed at a prompt and
-what appears in a document both work."
+  "Return the page at URL in the currently held site.
+
+URL is forgiving about slashes. Values typed at the REPL and values found in a
+document both work."
   (when *site*
     (site-page *site* (format nil "/~{~a/~}" (url-segments url)))))
 
 (defun rebuild ()
-  "Build the served site again and hold the new graph. Returns the site."
-  ;; Stamped before the build, so an edit made while one is running is seen
-  ;; by the next request rather than missed.
+  "Build the served site again and hold the new graph.
+
+Return the site."
+  ;; Stamp before the build. Then an edit made during the build is seen by the
+  ;; next request instead of missed.
   (setf *last-build* (get-universal-time))
   (setf *site* (build *server-root* :output *server-output*
                                     :drafts t
                                     :policy :permissive)))
 
 (defun rebuild-page (url)
-  "Render one page again and write it. Returns the path written."
+  "Render one page again and write it.
+
+Return the path written."
   (let ((page (page url)))
     (when page
       (write-page page *server-output* *site*))))
 
 (defun source-changed-p (root since)
-  "Whether anything under ROOT was written after SINCE."
+  "Return true when any file below ROOT was written after SINCE."
   (loop for directory in (all-directories root)
         thereis (loop for file in (uiop:directory-files directory)
                       thereis (> (file-write-date file) since))))
 
 (defun ensure-fresh ()
-  "Rebuild if the source has changed since the last build.
-Checked per request rather than watched, which needs no dependency and no
-thread, and costs a stat of a personal site's worth of files."
+  "Rebuild when the source changed since the last build.
+
+This is checked per request instead of watched. It needs no dependency and no
+extra thread. The cost is a stat of a personal site's files."
   (when (source-changed-p *server-root* *last-build*)
     (rebuild)))
 
-;;; HTTP, to the extent required
+;;; HTTP, only as much as the development server needs
 
 (defun write-crlf (stream)
   (write-char #\Return stream)
@@ -102,7 +123,9 @@ thread, and costs a stat of a personal site's worth of files."
     (405 "Method Not Allowed")))
 
 (defun respond (stream status type body)
-  "Write one complete response to STREAM. BODY is a byte vector."
+  "Write one complete response to STREAM.
+
+BODY is a byte vector."
   (let ((header (with-output-to-string (out)
                   (format out "HTTP/1.1 ~d ~a" status (status-text status))
                   (write-crlf out)
@@ -110,8 +133,8 @@ thread, and costs a stat of a personal site's worth of files."
                   (write-crlf out)
                   (format out "Content-Length: ~d" (length body))
                   (write-crlf out)
-                  ;; A development server's output must never be cached, or
-                  ;; the rebuild it just did is invisible.
+                  ;; Never cache development-server output. Otherwise the
+                  ;; rebuild that just ran can be invisible.
                   (format out "Cache-Control: no-store")
                   (write-crlf out)
                   (format out "Connection: close")
@@ -126,7 +149,9 @@ thread, and costs a stat of a personal site's worth of files."
   (sb-ext:string-to-octets string :external-format :utf-8))
 
 (defun read-request-line (stream)
-  "One CRLF-terminated line from STREAM, or NIL at end of input."
+  "Return one CRLF-terminated line from STREAM.
+
+Return NIL at end of input."
   (let ((bytes (make-array 0 :element-type '(unsigned-byte 8)
                              :adjustable t :fill-pointer t))
         (read-anything nil))
@@ -140,16 +165,19 @@ thread, and costs a stat of a personal site's worth of files."
                                :external-format :utf-8))))
 
 (defun request-file (target output)
-  "The file under OUTPUT that TARGET names, or NIL when it names none.
-A target that climbs out of the tree names none. This server is bound to
-loopback and serves a directory a person just built, but a path that escapes
-its root is never the request that was meant."
+  "Return the file below OUTPUT named by TARGET.
+
+Return NIL when TARGET names no file.
+
+A target that climbs out of OUTPUT names no file. This server is bound to
+loopback and serves a directory the user just built, but a path escape is
+never the request that was meant."
   (let* ((path (subseq target 0 (or (position #\? target) (length target))))
          (segments (url-segments path)))
     (when (notany (lambda (segment) (string= segment "..")) segments)
       (let* ((last (car (last segments)))
-             ;; A directory, or a name with no extension, means the index
-             ;; inside it. Everything else is a file.
+             ;; A directory, or a name with no extension, names index.html
+             ;; inside it. Everything else names a file.
              (segments (if (or (null last) (not (find #\. last)))
                            (append segments '("index.html"))
                            segments))
@@ -161,7 +189,7 @@ its root is never the request that was meant."
 (defun handle-connection (stream output)
   (let ((request (read-request-line stream)))
     (when request
-      ;; The headers are read and discarded. Nothing here varies on them.
+      ;; Read and discard headers. No behavior here depends on them.
       (loop for line = (read-request-line stream)
             while (and line (plusp (length line))))
       (let* ((parts (uiop:split-string request :separator " "))
@@ -194,10 +222,14 @@ its root is never the request that was meant."
 
 (defun serve (root &key (port 4000) output)
   "Build ROOT, serve it on PORT, and rebuild when the source changes.
-Returns a server. The listener is on its own thread so that the REPL which
-started it stays usable, which is the entire point: the graph is in the image
-and answers while the server runs. PORT 0 takes whatever the system gives,
-and the server records which."
+
+Return a server.
+
+The listener runs in its own thread, so the REPL that started it stays usable.
+That is the point: the graph stays in the image and can answer while the
+server runs.
+
+PORT 0 asks the system for a port. The server records the port it received."
   (setf *server-root* (resolve-root root))
   (setf *server-output* (uiop:ensure-absolute-pathname
                          (uiop:ensure-directory-pathname
@@ -228,8 +260,8 @@ and the server records which."
                                        connection :input t :output t
                                        :element-type '(unsigned-byte 8))))
                           (handler-case (handle-connection stream output)
-                            ;; One bad connection must not take the server
-                            ;; down; a browser closing early is routine.
+                            ;; One bad connection must not stop the server.
+                            ;; Browsers close early during normal use.
                             (error () nil)))
                      (ignore-errors (sb-bsd-sockets:socket-close connection))))))
              :name "anchor serve"))
@@ -242,5 +274,7 @@ and the server records which."
   server)
 
 (defun wait (server)
-  "Block until SERVER's thread ends. This is what the command line does."
+  "Block until SERVER's thread ends.
+
+The command line uses this."
   (sb-thread:join-thread (server-thread server) :default nil))

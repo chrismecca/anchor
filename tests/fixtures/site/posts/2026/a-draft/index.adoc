@@ -2,9 +2,9 @@
 :date: 2026-09-01
 :draft:
 
-Carrying :draft: keeps this page out of the graph entirely, so it is
-absent from listings and from the output unless drafts are asked for.
+The `:draft:` attribute keeps this page out of the graph.
 
-Its date is the newest in the fixture on purpose: were drafts merely
-hidden from the output rather than left out of the graph, this page
-would still take the front page's lead slot.
+It is absent from listings and from output unless drafts are requested.
+
+Its date is the newest date in the fixture on purpose. If drafts were only
+hidden from output, this page would still take the front page's lead slot.

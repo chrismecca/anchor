@@ -1,4 +1,4 @@
 = Two
 :date: 2026-02-01
 
-Dated.
+This page has a date.

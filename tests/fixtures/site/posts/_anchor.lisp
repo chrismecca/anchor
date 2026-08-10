@@ -1,6 +1,6 @@
-;;;; Configuration for posts/ and everything under it.
+;;;; Configuration for posts/ and everything below it.
 ;;;;
-;;;; Only the author is named here. Everything else -- the site title, the
-;;;; base URL -- cascades down from the root and is not repeated.
+;;;; This file names only the author. The site title and base URL cascade from
+;;;; the root configuration and are not repeated.
 
 (list :author "Someone Else")

@@ -1,14 +1,15 @@
-;;;; Pages, and finding them.
+;;;; Pages and page discovery.
 ;;;;
-;;;; The filesystem is the data model. A directory holding an index.adoc is a
-;;;; page and its URL is its path, so discovery is a walk and there is nothing
-;;;; to configure.
+;;;; The filesystem is the data model. A directory that contains index.adoc is
+;;;; a page. Its path is its URL. Discovery is therefore a filesystem walk, and
+;;;; there is nothing to configure.
 ;;;;
-;;;; A page stores its source, its URL and its parsed document, and nothing
-;;;; else. Title and date are read back out of the document every time they
-;;;; are asked for rather than copied into slots here, because the moment
-;;;; anchor keeps its own copy of something the document already knows, the
-;;;; two can disagree.
+;;;; A PAGE stores its source path, URL, and parsed document. It stores nothing
+;;;; else.
+;;;;
+;;;; Title and date are read from the document each time they are requested.
+;;;; They are not copied into page slots. When anchor keeps a second copy of
+;;;; data the document already knows, the two copies can disagree.
 
 (in-package #:anchor)
 
@@ -19,47 +20,58 @@
   document)
 
 (defun resolve-root (root)
-  "ROOT as an absolute, resolved directory pathname.
-A page's URL is its path relative to the root, and that subtraction needs
-both sides in the same form. Merely making the path absolute is not enough:
-a root of \".\" keeps its dot as a directory component, which then fails to
-match the prefix of any directory beneath it. TRUENAME resolves the dot, and
-signals plainly when the root does not exist."
+  "Return ROOT as an absolute, resolved directory pathname.
+
+A page URL is the page path relative to ROOT. That subtraction needs both
+pathnames in the same form.
+
+Making the pathname absolute is not enough. A root of \".\" keeps the dot as a
+directory component, which then fails to match the prefix of directories below
+it.
+
+TRUENAME resolves the dot. It also signals clearly when ROOT does not exist."
   (truename (uiop:ensure-directory-pathname root)))
 
 (defun reserved-name-p (name)
-  "Whether NAME is reserved. Anything beginning with an underscore is."
+  "Return true when NAME is reserved.
+
+A name is reserved when it starts with an underscore."
   (and (plusp (length name)) (char= (char name 0) #\_)))
 
 (defun directory-name (path)
-  "The name of PATH's own directory, without its parents."
+  "Return PATH's directory name without its parents."
   (car (last (pathname-directory path))))
 
 (defun content-directories (root)
-  "ROOT and every directory beneath it whose name is not reserved."
+  "Return ROOT and each non-reserved directory below it."
   (cons root
         (loop for sub in (uiop:subdirectories root)
               unless (reserved-name-p (directory-name sub))
                 append (content-directories sub))))
 
 (defun directory-url (root directory)
-  "DIRECTORY's path relative to ROOT, as a URL with a trailing slash."
+  "Return DIRECTORY's path relative to ROOT as a URL with a trailing slash."
   (let ((relative (uiop:enough-pathname directory root)))
     (format nil "/~{~a/~}" (rest (pathname-directory relative)))))
 
 (defun parse-document (path)
-  "Parse PATH, resignalling a cl-adoc failure as UNREADABLE-DOCUMENT.
-anchor does not report cl-adoc's conditions as its own, so that a caller
-handling anchor's build errors does not have to know what parses the input."
+  "Parse PATH and resignal cl-adoc failures as UNREADABLE-DOCUMENT.
+
+anchor does not expose cl-adoc conditions as build errors. A caller that
+handles anchor build errors should not need to know which parser reads the
+input."
   (handler-case (adoc:parse-file path)
     (adoc:adoc-error (cause)
       (error 'unreadable-document :path path :cause cause))))
 
 (defun discover-pages (root)
-  "Every page under ROOT, in directory order.
-An .adoc file not named index.adoc is not a page; it is there to be included
-by a document that wants it. A SKIP-PAGE restart is offered around each page
-so that one unparseable document does not end the build."
+  "Return every page below ROOT, in directory order.
+
+An .adoc file not named index.adoc is not a page. It is available for a
+document to include, but discovery ignores it.
+
+A SKIP-PAGE restart is offered around each page. One unreadable document does
+not have to end the build."
   (loop with root = (resolve-root root)
         for directory in (content-directories root)
         for source = (merge-pathnames "index.adoc" directory)
@@ -72,12 +84,16 @@ so that one unparseable document does not end the build."
 ;;; Reading a page
 
 (defun page-title (page)
-  "PAGE's title as text, or NIL when the document has none."
+  "Return PAGE's title as text.
+
+Return NIL when the document has no title."
   (let ((title (adoc:document-title (page-document page))))
     (and title (adoc:node-text title))))
 
 (defun page-date (page)
-  "PAGE's :date: attribute, or NIL when it has none."
+  "Return PAGE's :date: attribute.
+
+Return NIL when PAGE has no date."
   (adoc:document-attribute (page-document page) "date"))
 
 (defparameter *month-names*
@@ -85,10 +101,12 @@ so that one unparseable document does not end the build."
     "July" "August" "September" "October" "November" "December"))
 
 (defun page-date-human (page)
-  "PAGE's date as prose, or NIL when it has none.
-A date anchor cannot read is returned unchanged rather than replaced or
-dropped: showing the author what they actually wrote is more use than hiding
-it behind a guess."
+  "Return PAGE's date as prose.
+
+Return NIL when PAGE has no date.
+
+When anchor cannot read the date, return it unchanged. Showing the author what
+the document contains is more useful than hiding it behind a guess."
   (let ((date (page-date page)))
     (when date
       (or (ignore-errors
@@ -99,7 +117,9 @@ it behind a guess."
           date))))
 
 (defun split-list (string)
-  "STRING split on commas, trimmed, with the empty pieces dropped."
+  "Split STRING on commas.
+
+Trim each part and drop empty parts."
   (loop for start = 0 then (1+ comma)
         for comma = (position #\, string :start start)
         for piece = (string-trim '(#\Space #\Tab)
@@ -108,47 +128,51 @@ it behind a guess."
           while comma))
 
 (defun page-tags (page)
-  "PAGE's tags, in the order the document gives them."
+  "Return PAGE's tags in document order."
   (let ((tags (adoc:document-attribute (page-document page) "tags")))
     (when tags (split-list tags))))
 
 (defun page-draft-p (page)
-  "Whether PAGE carries :draft:.
-The attribute's presence is what counts and its value is never read, so
-`:draft: false` is still a draft. Deleting the line is how a draft is
-published. One rule, and no table of what counts as false."
+  "Return true when PAGE has a :draft: attribute.
+
+Only the attribute's presence matters. Its value is not read. Thus,
+`:draft: false` is still a draft. Delete the line to publish the page.
+
+This keeps one rule and avoids a table of false values."
   (and (adoc:document-attribute (page-document page) "draft") t))
 
 (defun render-blocks (blocks)
-  "BLOCKS rendered as an HTML fragment."
+  "Render BLOCKS as an HTML fragment."
   (let ((backend (make-instance 'adoc:html5)))
     (with-output-to-string (out)
       (dolist (block blocks)
         (adoc:render-node block backend out)))))
 
 (defun page-body-html (page)
-  "PAGE's blocks rendered as HTML, without its title.
-cl-adoc's RENDER-HTML emits the document title as an h1, which a layout
-supplies itself from PAGE-TITLE, so the blocks are rendered one at a time
-here instead."
+  "Return PAGE's body blocks as HTML, without the document title.
+
+cl-adoc's RENDER-HTML emits the document title as an h1. A layout supplies
+that h1 from PAGE-TITLE. The body is therefore rendered block by block here."
   (render-blocks (adoc:document-blocks (page-document page))))
 
 (defun page-preamble (page)
-  "PAGE's blocks up to its first heading."
+  "Return PAGE's blocks up to the first heading."
   (loop for block in (adoc:document-blocks (page-document page))
         until (adoc:heading-p block)
         collect block))
 
 (defun page-uses-stem-p (page)
-  "Whether PAGE contains mathematics.
-Asked of the document rather than declared by the author, which is the rule
-for anything a document can answer about itself. What a layout does with the
-answer is the layout's business: anchor ships no math renderer, because it
-ships no JavaScript."
+  "Return true when PAGE contains mathematics.
+
+Ask the document instead of requiring the author to declare the answer. That
+is the rule for anything a document can answer about itself.
+
+What a layout does with the answer is the layout's job. anchor ships no math
+renderer because it ships no JavaScript."
   (adoc:document-uses-stem-p (page-document page)))
 
 (defun collapse-whitespace (string)
-  "STRING with every run of whitespace reduced to one space, and trimmed."
+  "Return STRING with whitespace runs reduced to one space."
   (string-trim " "
                (with-output-to-string (out)
                  (let ((pending nil)
@@ -163,17 +187,20 @@ ships no JavaScript."
                                   (write-char character out))))))))
 
 (defun truncate-text (string limit)
-  "STRING cut to LIMIT characters at a word boundary."
+  "Return STRING cut to LIMIT characters at a word boundary."
   (if (<= (length string) limit)
       string
       (let ((space (position #\Space string :from-end t :end limit)))
         (concatenate 'string (subseq string 0 (or space limit)) "…"))))
 
 (defun page-description (page)
-  "The prose that describes PAGE.
-Its `:description:` when the document gives one, and otherwise its excerpt as
-text. The document is the metadata here as everywhere: an author who has said
-what a page is about is believed, and one who has not gets what they wrote."
+  "Return prose that describes PAGE.
+
+Use PAGE's `:description:` when the document provides one. Otherwise use the
+excerpt text.
+
+The document is the metadata. An author-written description wins. Without one,
+anchor uses what the page already says."
   (or (adoc:document-attribute (page-document page) "description")
       (let ((text (collapse-whitespace
                    (format nil "~{~a~^ ~}"
@@ -182,13 +209,16 @@ what a page is about is believed, and one who has not gets what they wrote."
           (truncate-text text 200)))))
 
 (defun page-excerpt-blocks (page)
-  "The blocks PAGE's excerpt is made of."
+  "Return the blocks that make PAGE's excerpt."
   (or (page-preamble page)
       (let ((paragraph (adoc:find-node #'adoc:paragraph-p (page-document page))))
         (and paragraph (list paragraph)))))
 
 (defun page-excerpt-html (page)
-  "PAGE's preamble as HTML, or its first paragraph when it has no preamble.
-This is a subtree of the parsed document rendered on its own. There is no
-marker in the source, no attribute, and nothing truncates rendered HTML."
+  "Return PAGE's excerpt as HTML.
+
+The excerpt is PAGE's preamble, or its first paragraph when it has no preamble.
+It is a subtree of the parsed document rendered on its own.
+
+There is no source marker, no attribute, and no truncation of rendered HTML."
   (render-blocks (page-excerpt-blocks page)))

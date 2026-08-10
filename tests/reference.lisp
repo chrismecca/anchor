@@ -1,4 +1,4 @@
-;;;; The reference relation.
+;;;; Reference relation tests.
 
 (in-package #:anchor/tests)
 
@@ -14,9 +14,9 @@
         :key #'anchor::reference-target :test #'string=))
 
 (define-test (reference colocated-media)
-  ;; A reference keeps what the document wrote and records what it resolved
-  ;; to. The node is what gets rewritten, so the two are not the same string
-  ;; and check can report one in terms of the other.
+  ;; A reference keeps the target the document wrote and records the target it
+  ;; resolved to. The node is rewritten, so those strings can differ. check can
+  ;; then report both what the document wrote and where it resolved.
   (let ((ref (reference-to (test-site) "/posts/2026/first-post/" "diagram.svg")))
     (true ref "A page-local image resolves on the first step of the walk.")
     (is eq :asset (anchor::reference-kind ref))
@@ -25,7 +25,7 @@
 (define-test (reference shared-media)
   (let ((ref (reference-to (test-site) "/posts/2026/second-post/"
                            "_media/portrait.svg")))
-    (true ref "_media/ is found further up the same walk, not by a second rule.")
+    (true ref "_media/ is found later in the same walk, not by a second rule.")
     (is eq :asset (anchor::reference-kind ref))
     (is string= "/_media/portrait.svg" (anchor::reference-url ref))))
 
@@ -38,25 +38,25 @@
     (is eq :page (anchor::reference-kind absolute))
     (is eq :page (anchor::reference-kind relative))
     (is string= "/posts/2026/first-post/" (anchor::reference-url relative)
-        "A relative link resolves against the referring page's own URL and is
-rewritten site-absolute, so it survives being served from another depth.")))
+        "A relative link resolves against the referring page's URL. It is then
+rewritten site-absolute, so it works from any served depth.")))
 
 (define-test (reference external)
   (let ((ref (reference-to (test-site) "/posts/2026/first-post/"
                            "https://example.org/elsewhere")))
     (is eq :external (anchor::reference-kind ref))
     (false (anchor::reference-url ref)
-           "Nothing outside the site is resolved, rewritten, or checked.")))
+           "Targets outside the site are not resolved, rewritten, or checked.")))
 
 (define-test (reference rewritten-in-the-tree)
   (let* ((site (test-site))
          (post (anchor:site-page site "/posts/2026/second-post/"))
          (html (anchor:page-body-html post)))
     (true (search "src=\"/_media/portrait.svg\"" html)
-          "The rendered page carries the resolved path, which only works
-because the target was rewritten on the node before cl-adoc rendered it.")
+          "The rendered page contains the resolved path because the node was
+rewritten before cl-adoc rendered it.")
     (false (search "src=\"_media/portrait.svg\"" html)
-           "Nothing rewrites the HTML afterwards; the tree was changed.")))
+           "Nothing rewrites HTML afterward. The tree was changed.")))
 
 (define-test (reference missing)
   (let* ((root (fixture-site))
@@ -74,6 +74,6 @@ because the target was rewritten on the node before cl-adoc rendered it.")
   (true (anchor::url-scheme-p "https://example.org/"))
   (true (anchor::url-scheme-p "mailto:someone@example.org"))
   (true (anchor::url-scheme-p "//example.org/x")
-        "A protocol-relative URL is outside the site too.")
+        "A protocol-relative URL is outside the site.")
   (false (anchor::url-scheme-p "diagram.svg"))
   (false (anchor::url-scheme-p "../first-post/")))

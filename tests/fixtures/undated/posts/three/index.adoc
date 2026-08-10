@@ -1,4 +1,5 @@
 = Three
 
-Every other page in this section is dated, so the date here was
-forgotten rather than omitted on purpose.
+Every other page in this section has a date.
+
+This date was forgotten, not deliberately omitted.

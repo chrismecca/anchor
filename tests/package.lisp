@@ -7,15 +7,16 @@
 (in-package #:anchor/tests)
 
 (defun fixture-site ()
-  "The sample site the discovery and build tests run against."
+  "Return the sample site used by discovery and build tests."
   (asdf:system-relative-pathname :anchor "tests/fixtures/site/"))
 
 (defun broken-fixture-site ()
-  "A site with one reference that resolves to nothing.
-Separate from the sample site, since a broken reference there would fail
-every test that builds it."
+  "Return a site with one missing reference.
+
+This is separate from the sample site. A broken reference in the sample site
+would fail every test that builds it."
   (asdf:system-relative-pathname :anchor "tests/fixtures/broken/"))
 
 (defun undated-fixture-site ()
-  "A site where one page in a dated section has no date."
+  "Return a site where one page in a dated section has no date."
   (asdf:system-relative-pathname :anchor "tests/fixtures/undated/"))

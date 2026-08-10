@@ -1,45 +1,52 @@
 ;;;; Emitters.
 ;;;;
-;;;; An emitter is a function of a site returning a list of output files.
-;;;; Every derived artifact goes through this one interface, which is why none
-;;;; of them is a subsystem: the feed, the sitemap, the crawler policy and the
-;;;; tag index are four ordinary functions in a list, and a site that wants a
-;;;; fifth writes one.
+;;;; An emitter is a function from a site to a list of output files.
 ;;;;
-;;;; The feed and the sitemap need absolute URLs and so need :base-url. A site
-;;;; that has not set one gets neither, because there is no such thing as a
-;;;; valid feed with relative entry ids, and emitting a broken one would be
-;;;; worse than emitting none.
+;;;; Every derived artifact uses this one interface. The feed, sitemap, crawler
+;;;; policy, and tag index are ordinary functions in one list. None is a
+;;;; subsystem. A site that wants a fifth artifact writes another function.
+;;;;
+;;;; The feed and sitemap need absolute URLs, so they need :base-url. A site
+;;;; without :base-url gets neither. There is no valid feed with relative entry
+;;;; IDs. Emitting a broken feed is worse than emitting none.
 
 (in-package #:anchor)
 
 (defstruct (output (:constructor output (path content)))
-  "One file an emitter produced: where it goes, and what is in it."
+  "One file produced by an emitter.
+
+PATH is where it goes. CONTENT is what it contains."
   path
   content)
 
 (defun feed-timestamp (date)
-  "DATE as the date-time Atom requires.
-A page carries a date and not a time. Midnight UTC is the reading of that
-date which does not drift when a reader is in another timezone."
+  "Return DATE in the date-time form required by Atom.
+
+A page has a date, not a time. Midnight UTC is the interpretation that does
+not drift when the reader is in another time zone."
   (format nil "~aT00:00:00Z" date))
 
 (defun feed-entries (site)
-  "The pages the feed carries, newest first and no more than :feed-limit.
-Sections are left out. A page with children is an index of other pages, and
-the front page is one too, so carrying them would deliver a reader the
-listing as well as everything on it. It would also give the root page an id
-identical to the feed's own, which is the same resource claimed twice.
+  "Return pages carried by the feed.
 
-Nothing declares that a page is a section. Having children is what makes one,
-and the graph already knows."
+Return newest first and no more than :feed-limit.
+
+Sections are excluded. A page with children is an index of other pages. The
+front page is one too. Putting those pages in the feed would deliver a list as
+well as every item on the list.
+
+It would also give the root page an ID identical to the feed's own ID. That is
+one resource claimed twice.
+
+Nothing declares that a page is a section. Having children makes it one, and
+the graph already knows that."
   (let* ((limit (or (getf (site-root-config site) :feed-limit) 20))
          (articles (remove-if (lambda (page) (site-children site page))
                               (site-chronology site))))
     (subseq articles 0 (min limit (length articles)))))
 
 (defun atom-feed (site)
-  "The Atom feed, at /feed.xml."
+  "Return the Atom feed output at /feed.xml."
   (let ((base (base-url site))
         (entries (feed-entries site)))
     (when (and base entries)
@@ -73,7 +80,7 @@ and the graph already knows."
                   (string #\Newline))))))))
 
 (defun sitemap (site)
-  "The sitemap, at /sitemap.xml."
+  "Return the sitemap output at /sitemap.xml."
   (let ((base (base-url site)))
     (when base
       (list
@@ -92,20 +99,25 @@ and the graph already knows."
                 (string #\Newline)))))))
 
 (defun robots-txt (site)
-  "The crawler policy, at /robots.txt.
-Advisory, and deliberately short. Which user agents are worth naming changes
-faster than anchor is released, and enforcement belongs at a server anchor
-does not configure."
+  "Return crawler policy output at /robots.txt.
+
+The policy is advisory and deliberately short. The set of useful user-agent
+names changes faster than anchor is released. Enforcement belongs at the
+server, which anchor does not configure."
   (let ((base (base-url site)))
     (list (output "robots.txt"
                   (format nil "User-agent: *~%Allow: /~%~@[~%Sitemap: ~a/sitemap.xml~%~]"
                           base)))))
 
 (defun tag-id (tag)
-  "TAG as an element id: lowercase, and anything else becomes a hyphen.
-Exported because a layout that links a tag to its place on /tags/ has to
-produce the same string this put in the id, and reimplementing the rule is
-how the two come to disagree."
+  "Return TAG as an element ID.
+
+Lowercase letters and digits stay as they are. Other characters become
+hyphens.
+
+This is exported because a layout that links a tag to its place on /tags/ must
+produce the same ID that this page uses. Reimplementing the rule is how the
+two values drift apart."
   (string-downcase
    (map 'string
         (lambda (character)
@@ -113,24 +125,28 @@ how the two come to disagree."
         tag)))
 
 (defun generated-page (site url title)
-  "A page anchor writes rather than reads.
-The tag index has a title and a URL and no file behind it, and everything
-that renders a page wants a page. Its source is the root's, so the root's
-configuration is the one that applies to it.
+  "Return a page that anchor writes instead of reads.
 
-Exported because an emitter that writes a page needs one, and writing an
-emitter is what SPEC.adoc offers a site in place of the pages anchor
-defers. Without this that offer cannot be taken up from outside the
-package."
+The tag index has a title and URL but no source file. Code that renders a page
+still needs a PAGE object. The generated page uses the root source path, so
+the root configuration applies to it.
+
+This is exported because a custom emitter that writes a page needs it.
+SPEC.adoc says a site can write an emitter for pages anchor defers. Without
+this function, that offer cannot be used outside the package."
   (make-page :source (merge-pathnames "index.adoc" (site-root site))
              :url url
              :document (adoc:parse-string (format nil "= ~a~%" title))))
 
 (defun tags-page (site)
-  "One /tags/ page listing every tag with its pages grouped beneath it.
-Not one page per tag. Output filenames are stable, so each of those would be
-a URL owed permanently, including for the tags that turn out to be mistakes.
-A site that wants them writes an emitter, which is what this interface is."
+  "Return one /tags/ page with all tags and their pages.
+
+Do not generate one page per tag. Output filenames are stable, so each tag
+page would create a permanent URL, including for tags that later prove to be
+mistakes.
+
+A site that wants per-tag pages writes an emitter. That is what this interface
+is for."
   (let ((tags (site-tags site)))
     (when tags
       (let* ((page (generated-page site "/tags/" "Tags"))
@@ -147,12 +163,13 @@ A site that wants them writes an emitter, which is what this interface is."
 
 (defparameter *emitters*
   (list #'atom-feed #'sitemap #'robots-txt #'tags-page)
-  "The emitters a build runs.
-A list, so that a site can add to it or replace it wholesale. This and the
-head tags are the whole of anchor's answer to feeds, crawlers and social
-previews. There is no SEO feature behind them.")
+  "Emitters run by a build.
+
+This is a list so a site can add to it or replace it. This list and
+*HEAD-TAGS* are anchor's full answer to feeds, crawlers, and social previews.
+There is no SEO feature behind them.")
 
 (defun emit (site)
-  "Run every emitter over SITE and return the outputs they produced."
+  "Run every emitter over SITE and return the outputs."
   (loop for emitter in *emitters*
         append (funcall emitter site)))
