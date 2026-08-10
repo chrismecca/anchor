@@ -5,6 +5,18 @@ Notable changes to anchor.
 anchor and SPEC.adoc are versioned separately. SPEC.adoc defines what anchor
 does and what it refuses to do.
 
+== 1.0.2
+
+Documentation and fixture prose cleanup.
+
+This release changes words, not behavior. It rewrites README.adoc,
+SPEC.adoc, CHANGELOG.adoc, source comments, docstrings, test descriptions,
+and fixture prose for shorter and clearer language.
+
+It also keeps Makefile recipes tab-indented, as make requires.
+
+No API, output, parser, graph, command, or SPEC behavior changed.
+
 == 1.0.1
 
 A bug fix allowed by the freeze.
