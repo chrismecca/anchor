@@ -69,6 +69,17 @@ Lisp.")
      (with-simple-restart (continue "Leave it as written and go on.")
        (error condition)))))
 
+(defun skip-unreadable-page (condition)
+  "Under :permissive, report CONDITION and skip the page it names.
+
+Discovery signals UNREADABLE-DOCUMENT itself, inside a SKIP-PAGE restart, so
+REPORT-PROBLEM cannot handle it. Under :strict and :interactive this handler
+declines. The error then aborts a strict build, and an interactive build stops
+in the debugger with SKIP-PAGE offered."
+  (when (eq *policy* :permissive)
+    (warn "~a" condition)
+    (invoke-restart 'skip-page)))
+
 (defun report-missing-references (site)
   "Signal MISSING-REFERENCE for each unresolved target in SITE.
 
@@ -155,7 +166,8 @@ DRAFTS includes pages with :draft:. serve uses this, and --drafts asks for it.
 POLICY is bound for the whole build. One setting governs every problem the
 build reports."
   (let* ((*policy* policy)
-         (site (make-site root :drafts drafts))
+         (site (handler-bind ((unreadable-document #'skip-unreadable-page))
+                 (make-site root :drafts drafts)))
          (root (site-root site))
          ;; Do not resolve the output directory with ROOT's TRUENAME. It often
          ;; does not exist until the first page is written.

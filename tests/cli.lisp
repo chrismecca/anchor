@@ -87,6 +87,26 @@ line uses :strict because there is no debugger to stop in.")
       (uiop:delete-directory-tree target :validate t
                                          :if-does-not-exist :ignore))))
 
+(define-test (cli force-skips-unreadable-pages)
+  (let ((target (temporary-output)))
+    (unwind-protect
+         (progn
+           (multiple-value-bind (code stdout stderr)
+               (run-cli "build" (namestring (unreadable-fixture-site))
+                        "--output" (namestring target))
+             (declare (ignore stdout))
+             (is = 1 code)
+             (true (search "Could not parse" stderr)))
+           (multiple-value-bind (code stdout stderr)
+               (run-cli "build" (namestring (unreadable-fixture-site))
+                        "--output" (namestring target) "--force")
+             (is = 0 code "--force skips a page cl-adoc cannot parse.")
+             (true (search "built 1 page into" stdout))
+             (true (search "Could not parse" stderr)
+                   "The skipped page is still reported.")))
+      (uiop:delete-directory-tree target :validate t
+                                         :if-does-not-exist :ignore))))
+
 (define-test (cli missing-directory)
   (multiple-value-bind (code stdout stderr) (run-cli "check" "/no/such/place/")
     (declare (ignore stdout))

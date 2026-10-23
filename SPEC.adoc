@@ -566,6 +566,9 @@ The policy is bound at the top of the build:
   default when building from a REPL. It is one reason anchor is written in
   Lisp.
 
+Under `:permissive`, continuing past an `unreadable-document` means taking
+`skip-page`. The page is reported and left out of the build.
+
 == Command line
 
 Status: v1
@@ -607,6 +610,11 @@ That returns the page object. Rebuilding one page is a function call.
 
 This is not a hot-reload feature. It is what having an image gives you. It is
 documented here so that it does not get designed away.
+
+`serve` rebuilds with `:permissive`. A rebuild that still fails, such as one
+stopped by an `_anchor.lisp` that does not evaluate, is answered with a 500
+that names the problem. Every request gets that answer until an edit fixes
+it. Serving the previous build would hide that the edit did not take.
 
 == Compatibility
 

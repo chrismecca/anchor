@@ -20,3 +20,7 @@ would fail every test that builds it."
 (defun undated-fixture-site ()
   "Return a site where one page in a dated section has no date."
   (asdf:system-relative-pathname :anchor "tests/fixtures/undated/"))
+
+(defun unreadable-fixture-site ()
+  "Return a site with one page cl-adoc cannot parse and one page it can."
+  (asdf:system-relative-pathname :anchor "tests/fixtures/unreadable/"))
