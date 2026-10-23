@@ -23,4 +23,4 @@ repl:
 
 # ASDF writes compiled output outside the tree. Only remove that cache.
 clean:
-	rm -rf $$HOME/.config/cache/common-lisp/*/$(CURDIR)
+	rm -rf $${XDG_CACHE_HOME:-$$HOME/.cache}/common-lisp/*$(CURDIR)

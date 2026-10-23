@@ -1,8 +1,7 @@
 ;;;; package.lisp
 
 (defpackage #:anchor/tests
-  (:use #:cl #:parachute)
-  (:export #:run))
+  (:use #:cl #:parachute))
 
 (in-package #:anchor/tests)
 

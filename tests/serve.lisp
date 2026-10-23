@@ -49,7 +49,6 @@ Return three values: status line, headers, and body."
           (,server nil))
      (unwind-protect
           (progn
-            (uiop:collect-sub*directories (fixture-site) t t (constantly t))
             ;; Serve a copy. The server builds into the tree, and the fixture
             ;; is checked in.
             (copy-tree-to (fixture-site) source)
