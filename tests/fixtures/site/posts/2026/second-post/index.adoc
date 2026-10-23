@@ -19,5 +19,9 @@ image::_media/portrait.svg[A portrait]
 A relative link to link:../first-post/[the first post] resolves against this
 page's own URL.
 
+A link to link:../first-post/#a-section[a section of the first post] and a link
+to link:/about/?from=second-post[the about page] resolve the part before the
+fragment or query, then keep the rest.
+
 This page contains mathematics, so the document can report that fact:
 stem:[a^2 + b^2 = c^2].

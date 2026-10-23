@@ -23,6 +23,17 @@ Hidden names.
 A site that needs a dotfile in its output, such as `.well-known/` or
 `.htaccess`, adds it when it deploys.
 
+=== Links with a fragment or query resolve
+
+A link to another page's heading, such as `link:../about/#team[]`, was
+reported as a missing reference, so a build with such a link stopped. A target
+with a `?` query, or with a `*` in its name, did worse: the build signaled a
+file-system error.
+
+anchor now resolves the part before the first `?` or `#` and keeps the rest.
+`../about/#team` is rewritten to `/about/#team`. A target is a literal file
+name, never a pattern. SPEC.adoc records the rule under the site graph.
+
 == 1.0.2
 
 Documentation and fixture prose cleanup.

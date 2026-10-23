@@ -55,6 +55,24 @@ workaround. It is only an affordance that does not exist yet."
                       (or (alphanumericp character) (find character "+-.")))
                     (subseq target 0 colon))))))
 
+(defun split-target (target)
+  "Return two values: the part of TARGET that names a file or page, and the rest.
+
+The rest is a query, a fragment, or both. It starts at the first ? or #. It
+takes no part in resolution and is put back after the resolved URL, so
+../about/#team resolves ../about/ and is rewritten to /about/#team."
+  (let ((end (position-if (lambda (character) (find character "?#")) target)))
+    (if end
+        (values (subseq target 0 end) (subseq target end))
+        (values target ""))))
+
+(defun target-pathname (target)
+  "Parse TARGET as a relative file name.
+
+Characters that Common Lisp reads as wildcards, such as * and [, are taken
+literally. A file name in a document is never a pattern."
+  (uiop:parse-unix-namestring target))
+
 (defun page-directory (page)
   "Return the directory that contains PAGE's document."
   (uiop:pathname-directory-pathname (page-source page)))
@@ -80,7 +98,8 @@ Stop at ROOT."
 (defun asset-url (site path)
   "Return the URL that asset PATH will have in SITE's output."
   (concatenate 'string "/"
-               (namestring (uiop:enough-pathname path (site-root site)))))
+               ;; NAMESTRING would write a * in a file name as \*.
+               (uiop:native-namestring (uiop:enough-pathname path (site-root site)))))
 
 (defun url-segments (url)
   (remove "" (uiop:split-string url :separator "/") :test #'string=))
@@ -100,35 +119,39 @@ Stop at ROOT."
 Start at PAGE's directory and walk upward to SITE's root."
   (loop for directory in (ancestor-directories (page-directory page)
                                                (site-root site))
-        for candidate = (probe-file (merge-pathnames target directory))
+        for candidate = (probe-file (merge-pathnames (target-pathname target)
+                                                     directory))
         when (and candidate (not (uiop:directory-pathname-p candidate)))
           return candidate))
 
 (defun resolve-reference (site page node)
   "Classify what NODE on PAGE points at."
   (let ((target (adoc:reference-target node)))
-    (flet ((found (kind &key path url)
-             (%make-reference :page page :node node :target target
-                              :kind kind :path path :url url)))
-      (cond
-        ((or (null target) (string= target "")) (found :missing))
-        ((char= (char target 0) #\#) (found :fragment))
-        ((url-scheme-p target) (found :external))
-        ((char= (char target 0) #\/)
-         (let ((file (probe-file (merge-pathnames (subseq target 1)
-                                                  (site-root site)))))
-           (cond ((site-page site target) (found :page :url target))
-                 ((and file (not (uiop:directory-pathname-p file)))
-                  (found :asset :path file :url target))
-                 (t (found :missing)))))
-        (t
-         (let ((file (find-referenced-file site page target)))
-           (if file
-               (found :asset :path file :url (asset-url site file))
-               (let ((url (merge-url (page-url page) target)))
-                 (if (site-page site url)
-                     (found :page :url url)
-                     (found :missing))))))))))
+    (multiple-value-bind (name suffix) (split-target (or target ""))
+      (flet ((found (kind &key path url)
+               (%make-reference :page page :node node :target target
+                                :kind kind :path path
+                                :url (when url (concatenate 'string url suffix)))))
+        (cond
+          ((or (null target) (string= target "")) (found :missing))
+          ;; Only a query or a fragment. It points into this page.
+          ((string= name "") (found :fragment))
+          ((url-scheme-p target) (found :external))
+          ((char= (char name 0) #\/)
+           (let ((file (probe-file (merge-pathnames (target-pathname (subseq name 1))
+                                                    (site-root site)))))
+             (cond ((site-page site name) (found :page :url name))
+                   ((and file (not (uiop:directory-pathname-p file)))
+                    (found :asset :path file :url name))
+                   (t (found :missing)))))
+          (t
+           (let ((file (find-referenced-file site page name)))
+             (if file
+                 (found :asset :path file :url (asset-url site file))
+                 (let ((url (merge-url (page-url page) name)))
+                   (if (site-page site url)
+                       (found :page :url url)
+                       (found :missing)))))))))))
 
 (defun resolve-references (site)
   "Resolve every reference in SITE.

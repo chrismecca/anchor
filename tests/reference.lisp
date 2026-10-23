@@ -64,6 +64,55 @@ rewritten before cl-adoc rendered it.")
     (is equal '() (anchor::missing-references site)
         "The sample site has no broken references.")))
 
+(define-test (reference fragments-and-queries)
+  (let* ((site (test-site))
+         (section (reference-to site "/posts/2026/second-post/"
+                                "../first-post/#a-section"))
+         (query (reference-to site "/posts/2026/second-post/"
+                              "/about/?from=second-post"))
+         (asset (reference-to site "/posts/2026/first-post/"
+                              "diagram.svg?v=2#detail")))
+    (is eq :page (anchor::reference-kind section)
+        "The fragment takes no part in resolution. ../first-post/ is the page.")
+    (is string= "/posts/2026/first-post/#a-section" (anchor::reference-url section)
+        "The fragment is put back after the resolved URL.")
+    (is eq :page (anchor::reference-kind query))
+    (is string= "/about/?from=second-post" (anchor::reference-url query))
+    (is eq :asset (anchor::reference-kind asset))
+    (is string= "/posts/2026/first-post/diagram.svg?v=2#detail"
+        (anchor::reference-url asset))
+    (true (search "href=\"/posts/2026/first-post/#a-section\""
+                  (anchor:page-body-html
+                   (anchor:site-page site "/posts/2026/second-post/")))
+          "The rewritten node carries the fragment into the HTML.")))
+
+(define-test (reference split-target)
+  (flet ((split (target) (multiple-value-list (anchor::split-target target))))
+    (is equal '("../a/" "#b") (split "../a/#b"))
+    (is equal '("a.svg" "?v=2#x") (split "a.svg?v=2#x")
+        "The rest starts at the first ? or #, so a query keeps its fragment.")
+    (is equal '("" "#top") (split "#top"))
+    (is equal '("a/" "") (split "a/"))))
+
+(defun resolve-written (site url text)
+  "Resolve the first reference in TEXT as if the page at URL contained it."
+  (anchor::resolve-reference
+   site (anchor:site-page site url)
+   (first (adoc:document-references (adoc:parse-string text)))))
+
+(define-test (reference wildcard-characters)
+  (let ((site (test-site)))
+    (is eq :missing (anchor::reference-kind
+                     (resolve-written site "/" "image:star*.svg[A star]"))
+        "* is a wildcard in a Common Lisp pathname. In a document it is part of
+a file name. Before, this target signaled an error and stopped the build.")
+    (is eq :missing (anchor::reference-kind
+                     (resolve-written site "/" "image:/**/deep.svg[Deep]"))
+        "** is a wildcard directory. It is not a search either.")
+    (is eq :fragment (anchor::reference-kind
+                      (resolve-written site "/" "link:?page=2[Next]"))
+        "A target that is only a query points into this page.")))
+
 (define-test (reference url-merging)
   (is string= "/posts/2026/first-post/"
       (anchor::merge-url "/posts/2026/second-post/" "../first-post/"))

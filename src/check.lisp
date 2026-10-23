@@ -169,7 +169,7 @@ report."
        (null (report-undated report))))
 
 (defun relative-name (site path)
-  (namestring (uiop:enough-pathname path (site-root site))))
+  (uiop:native-namestring (uiop:enough-pathname path (site-root site))))
 
 (defun print-report (report &optional (stream *standard-output*))
   "Write REPORT to STREAM."
