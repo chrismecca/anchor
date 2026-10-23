@@ -331,6 +331,14 @@ The reference relation is all of media management. It is computed from
 `document-references`. It makes every integrity check in this document a
 hash-table lookup.
 
+A query or fragment is not part of what a reference names. For
+`../about/#team` or `diagram.svg?v=2`, anchor resolves the part before the
+first `?` or `#`, then writes the rest back after the resolved URL. A target
+that is only a query or fragment points into its own page. anchor does not
+check that a fragment names an anchor on the target page.
+
+A target names a file literally. Characters such as `*` are never patterns.
+
 === Incremental builds
 
 Status: later

@@ -13,5 +13,7 @@ Page-local media resolves on the first step of the walk:
 
 image::diagram.svg[A diagram]
 
+The diagram also opens link:diagram.svg?v=2#detail[on its own].
+
 A link to link:/posts/2026/second-post/[the second post], and a link to
 link:https://example.org/elsewhere[somewhere outside the site].
