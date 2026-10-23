@@ -84,7 +84,7 @@ Return three values: status line, headers, and body."
       (true (search "The First Post" body)
             "A directory is served as the index.html inside it."))))
 
-(define-test (serve assets)
+(define-test (serve serves-assets)
   (with-server (server)
     (multiple-value-bind (status head) (http-get (anchor:server-port server) "/style.css")
       (true (search "200" status))

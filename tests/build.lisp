@@ -94,7 +94,7 @@ Other tests pass absolute paths, so they do not cover this."))
       (false (search "chronology has something to order" html)
              "A row has no excerpt."))))
 
-(define-test (build drafts)
+(define-test (build draft-output)
   (with-built-site (output)
     (false (read-output output "posts/2026/a-draft/index.html")
            "A draft is not written.")
