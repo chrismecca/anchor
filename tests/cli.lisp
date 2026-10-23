@@ -55,7 +55,7 @@ RUN returns a code instead of quitting. That is what makes this testable."
     (is = 1 code "A broken reference exits non-zero. CI reads this.")
     (true (search "nonexistent.png" stdout))))
 
-(define-test (cli build)
+(define-test (cli build-command)
   (let ((target (temporary-output)))
     (unwind-protect
          (multiple-value-bind (code stdout)

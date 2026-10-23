@@ -7,7 +7,7 @@
 
 (define-test serialize-xml)
 
-(define-test (serialize-xml elements)
+(define-test (serialize-xml xml-elements)
   (is string= "<title>text</title>" (xml '(:title "text"))
       "An element that contains only text stays on one line.")
   (is string= "<link/>" (xml '(:link))
@@ -29,7 +29,7 @@ exception list to maintain.")
       (xml '(:feed (:title "A Site") nil))
       "A NIL child is dropped. A layout can omit an element in place."))
 
-(define-test (serialize-xml escaping)
+(define-test (serialize-xml xml-escaping)
   (is string= "<summary>a &lt; b &amp;&amp; c &gt; d</summary>"
       (xml '(:summary "a < b && c > d")))
   (is string= "<summary>&lt;p&gt;markup&lt;/p&gt;</summary>"
