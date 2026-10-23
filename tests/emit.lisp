@@ -114,7 +114,7 @@ This is the emitter SPEC.adoc says a site can write."
 page read from disk."))))
 
 (define-test (emit tag-ids-are-one-rule)
-  "A layout can link to the ID that the tag index uses.
+  :description "A layout can link to the ID that the tag index uses.
 
 The rule is part of the site interface, not a private detail."
   (is string= "lisp" (anchor:tag-id "lisp"))
@@ -125,7 +125,7 @@ The rule is part of the site interface, not a private detail."
         "The index uses TAG-ID too, so the two values cannot drift."))
 
 (define-test (emit without-base-url)
-  "A site without :base-url gets only outputs that can be correct."
+  :description "A site without :base-url gets only outputs that can be correct."
   (let* ((root (fixture-site))
          (site (anchor:make-site root)))
     ;; Stand in a configuration with no :base-url.
