@@ -148,6 +148,44 @@ even though it is not the root page.")
       (uiop:delete-directory-tree output :validate t
                                          :if-does-not-exist :ignore))))
 
+(define-test (build unreadable-pages)
+  (let ((output (temporary-output)))
+    (unwind-protect
+         (progn
+           (fail (anchor:build (unreadable-fixture-site) :output output
+                                                         :policy :strict)
+                 'anchor:unreadable-document
+                 ":strict aborts on a page cl-adoc cannot parse.")
+           (let ((warned nil))
+             (handler-bind ((warning (lambda (warning)
+                                       (setf warned t)
+                                       (muffle-warning warning))))
+               (anchor:build (unreadable-fixture-site) :output output
+                                                       :policy :permissive))
+             (true warned ":permissive reports the unreadable page.")
+             (true (read-output output "index.html")
+                   ":permissive skips the page and still writes the rest. Before,
+one unreadable page stopped a --force build and stopped serve.")
+             (false (read-output output "unclosed/index.html"))))
+      (uiop:delete-directory-tree output :validate t
+                                         :if-does-not-exist :ignore))))
+
+(define-test (build skip-page-restart)
+  (let ((output (temporary-output)))
+    (unwind-protect
+         (progn
+           (handler-bind ((anchor:unreadable-document
+                            (lambda (condition)
+                              (declare (ignore condition))
+                              (invoke-restart 'anchor::skip-page))))
+             (anchor:build (unreadable-fixture-site) :output output
+                                                     :policy :interactive))
+           (true (read-output output "index.html")
+                 "Under :interactive, SKIP-PAGE is offered. A person at the
+debugger can choose it, and the build goes on."))
+      (uiop:delete-directory-tree output :validate t
+                                         :if-does-not-exist :ignore))))
+
 (define-test (build assets)
   (with-built-site (output)
     (true (read-output output "style.css")

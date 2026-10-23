@@ -46,6 +46,12 @@ The REPL can read this value.")
 (defparameter *server-output* nil)
 (defparameter *last-build* 0)
 
+(defparameter *build-problem* nil
+  "The error that stopped the last rebuild, or NIL.
+
+While it is set, every request is answered with it. Serving the previous build
+instead would hide that the edit did not take.")
+
 (defparameter *content-types*
   '(("html" . "text/html; charset=utf-8")
     ("css"  . "text/css; charset=utf-8")
@@ -108,9 +114,16 @@ they are never part of the site."
   "Rebuild when the source changed since the last build.
 
 This is checked per request instead of watched. It needs no dependency and no
-extra thread. The cost is a stat of a personal site's files."
+extra thread. The cost is a stat of a personal site's files.
+
+A rebuild that fails is recorded in *BUILD-PROBLEM* and printed. It is not
+signaled. The request still gets an answer, and the next edit tries again."
   (when (source-changed-p *server-root* *last-build*)
-    (rebuild)))
+    (handler-case (progn (rebuild)
+                         (setf *build-problem* nil))
+      (error (problem)
+        (format *error-output* "~&anchor: ~a~%" problem)
+        (setf *build-problem* problem)))))
 
 ;;; HTTP, only as much as the development server needs
 
@@ -123,7 +136,8 @@ extra thread. The cost is a stat of a personal site's files."
     (200 "OK")
     (400 "Bad Request")
     (404 "Not Found")
-    (405 "Method Not Allowed")))
+    (405 "Method Not Allowed")
+    (500 "Internal Server Error")))
 
 (defun respond (stream status type body)
   "Write one complete response to STREAM.
@@ -208,10 +222,16 @@ never the request that was meant."
           (t
            (ensure-fresh)
            (let ((file (request-file target output)))
-             (if file
-                 (respond stream 200 (content-type file) (file-bytes file))
-                 (respond stream 404 "text/plain; charset=utf-8"
-                          (text-body (format nil "not found: ~a~%" target)))))))))))
+             (cond (*build-problem*
+                    (respond stream 500 "text/plain; charset=utf-8"
+                             (text-body (format nil "build failed: ~a~%"
+                                                *build-problem*))))
+                   (file
+                    (respond stream 200 (content-type file) (file-bytes file)))
+                   (t
+                    (respond stream 404 "text/plain; charset=utf-8"
+                             (text-body (format nil "not found: ~a~%"
+                                                target))))))))))))
 
 ;;; Running
 
@@ -233,6 +253,7 @@ That is the point: the graph stays in the image and can answer while the
 server runs.
 
 PORT 0 asks the system for a port. The server records the port it received."
+  (setf *build-problem* nil)
   (setf *server-root* (resolve-root root))
   (setf *server-output* (uiop:ensure-absolute-pathname
                          (uiop:ensure-directory-pathname

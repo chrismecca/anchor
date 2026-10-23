@@ -1,0 +1,6 @@
+= A Site with an Unreadable Page
+
+This fixture is separate from the sample site.
+
+One page below this one cannot be parsed. This page can, so a build that skips
+the unreadable page still has something to write.

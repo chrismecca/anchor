@@ -34,6 +34,20 @@ anchor now resolves the part before the first `?` or `#` and keeps the rest.
 `../about/#team` is rewritten to `/about/#team`. A target is a literal file
 name, never a pattern. SPEC.adoc records the rule under the site graph.
 
+=== --force and serve skip a page cl-adoc cannot parse
+
+Discovery offered a `skip-page` restart around each page, but nothing took it.
+One document cl-adoc could not parse stopped a `--force` build, and `serve`
+would not start.
+
+Under `:permissive`, an `unreadable-document` is now reported as a warning and
+its page is skipped. `:strict` still aborts, and `:interactive` still stops in
+the debugger with `skip-page` offered.
+
+When a `serve` rebuild failed for another reason, such as an `_anchor.lisp`
+that did not evaluate, the browser got an empty reply. It now gets a 500 that
+names the problem, until an edit fixes it.
+
 == 1.0.2
 
 Documentation and fixture prose cleanup.

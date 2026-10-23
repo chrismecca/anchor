@@ -1,0 +1,7 @@
+= An Unreadable Page
+
+A listing block opens below and is never closed, so cl-adoc cannot parse this
+document.
+
+----
+(this listing never ends
