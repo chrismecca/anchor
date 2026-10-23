@@ -38,15 +38,27 @@ TRUENAME resolves the dot. It also signals clearly when ROOT does not exist."
 A name is reserved when it starts with an underscore."
   (and (plusp (length name)) (char= (char name 0) #\_)))
 
+(defun hidden-name-p (name)
+  "Return true when NAME is hidden.
+
+A name is hidden when it starts with a dot. Hidden files and directories
+belong to other tools, such as .git/ and .DS_Store. anchor does not discover,
+copy, check, or watch them.
+
+A site kept in git would otherwise publish its .git/ directory with every
+build."
+  (and (plusp (length name)) (char= (char name 0) #\.)))
+
 (defun directory-name (path)
   "Return PATH's directory name without its parents."
   (car (last (pathname-directory path))))
 
 (defun content-directories (root)
-  "Return ROOT and each non-reserved directory below it."
+  "Return ROOT and each directory below it that is neither reserved nor hidden."
   (cons root
         (loop for sub in (uiop:subdirectories root)
-              unless (reserved-name-p (directory-name sub))
+              for name = (directory-name sub)
+              unless (or (reserved-name-p name) (hidden-name-p name))
                 append (content-directories sub))))
 
 (defun directory-url (root directory)

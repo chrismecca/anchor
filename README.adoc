@@ -59,6 +59,9 @@ it. Configuration is merged parent to child.
 `_media/` holds assets shared by a subtree. Referenced files inside `_media/`
 are copied.
 
+A file or directory whose name starts with `.` is hidden. It belongs to
+another tool, such as `.git/` or `.DS_Store`, and anchor ignores it.
+
 == Using it
 
 ----

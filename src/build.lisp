@@ -102,11 +102,13 @@ a build problem. *POLICY* decides how serious that problem is."
 Documents are not assets. An .adoc file is either a page, which is rendered,
 or an include, which belongs to the document that includes it.
 
-Reserved names are skipped, along with the directories that contain them."
+Reserved and hidden names are skipped, along with the directories that have
+them."
   (loop for directory in (content-directories root)
         append (loop for file in (uiop:directory-files directory)
                      for name = (file-namestring file)
                      unless (or (reserved-name-p name)
+                                (hidden-name-p name)
                                 (string-equal "adoc" (pathname-type file)))
                        collect file)))
 

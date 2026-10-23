@@ -157,7 +157,12 @@ even though it is not the root page.")
     (false (read-output output "posts/2026/first-post/notes.adoc")
            "A document is never copied as an asset.")
     (false (read-output output "_anchor.lisp")
-           "Configuration is not copied.")))
+           "Configuration is not copied.")
+    (false (read-output output ".hidden/config")
+           "A hidden directory is not copied. A site kept in git must not
+publish its .git/ directory.")
+    (false (read-output output ".hidden-file")
+           "A hidden file, such as .DS_Store, is not copied.")))
 
 (define-test (build media-is-copied-when-referenced)
   (with-built-site (output)

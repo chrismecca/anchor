@@ -22,7 +22,10 @@ graph's decision, not the filesystem walk's."))
     (false (find "/posts/2026/first-post/notes/" urls :test #'string=)
            "An .adoc file not named index.adoc is not a page.")
     (false (find-if (lambda (url) (search "_media" url)) urls)
-           "Reserved directories are not walked.")))
+           "Reserved directories are not walked.")
+    (false (find "/.hidden/" urls :test #'string=)
+           "Hidden directories belong to other tools, such as .git/. They are
+not walked, so an index.adoc inside one is not a page.")))
 
 (define-test (discovery reading)
   (let* ((pages (anchor:discover-pages (fixture-site)))

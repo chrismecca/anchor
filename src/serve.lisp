@@ -96,9 +96,12 @@ Return the path written."
       (write-page page *server-output* *site*))))
 
 (defun source-changed-p (root since)
-  "Return true when any file below ROOT was written after SINCE."
+  "Return true when any file below ROOT was written after SINCE.
+
+Hidden files are ignored. Tools such as git and Finder rewrite them often, and
+they are never part of the site."
   (loop for directory in (all-directories root)
-        thereis (loop for file in (uiop:directory-files directory)
+        thereis (loop for file in (site-files directory)
                       thereis (> (file-write-date file) since))))
 
 (defun ensure-fresh ()

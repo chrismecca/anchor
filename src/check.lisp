@@ -70,11 +70,18 @@ URLs are worth more than cache busting."
     duplicates))
 
 (defun all-directories (root)
-  "Return ROOT and every directory below it, except output directories."
+  "Return ROOT and every directory below it, except output and hidden
+directories."
   (cons root
         (loop for sub in (uiop:subdirectories root)
-              unless (string= "_site" (directory-name sub))
+              for name = (directory-name sub)
+              unless (or (string= "_site" name) (hidden-name-p name))
                 append (all-directories sub))))
+
+(defun site-files (directory)
+  "Return the files in DIRECTORY that are not hidden."
+  (remove-if (lambda (file) (hidden-name-p (file-namestring file)))
+             (uiop:directory-files directory)))
 
 (defun checkable-files (root)
   "Return files below ROOT that could be assets.
@@ -82,9 +89,10 @@ URLs are worth more than cache busting."
 Reserved directories are walked here even though discovery skips them. An
 unused file in _media/ is exactly the kind of thing worth reporting.
 
-Documents and configuration are not assets and are not counted."
+Documents, configuration, and hidden files are not assets and are not
+counted."
   (loop for directory in (all-directories root)
-        append (loop for file in (uiop:directory-files directory)
+        append (loop for file in (site-files directory)
                      unless (or (string-equal "adoc" (pathname-type file))
                                 (string= *config-file* (file-namestring file)))
                        collect file)))

@@ -184,6 +184,18 @@ Currently reserved:
 `_media/`:: Shared assets for this directory and below.
 `_site/`:: Output. Never read.
 
+=== Hidden names
+
+Any file or directory whose name starts with `.` is hidden. Hidden names
+belong to other tools, such as `.git/` and `.DS_Store`. anchor does not
+discover, copy, check, or watch them.
+
+Without this rule, a site kept in git would publish its `.git/` directory with
+every build.
+
+A site that needs a dotfile in its output, such as `.well-known/` or
+`.htaccess`, adds it when it deploys. Deployment is out of scope.
+
 === Large media
 
 Status: later
