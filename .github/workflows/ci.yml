@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
 
+# CI only reads the repository. Pin that here so a change to the repository's
+# default token permissions cannot widen it.
+permissions:
+  contents: read
+
 jobs:
   test:
     name: ${{ matrix.os }}
@@ -21,7 +26,11 @@ jobs:
         os: [ubuntu-24.04, ubuntu-26.04]
 
     steps:
-      - uses: actions/checkout@v4
+      # Nothing in this job runs authenticated git commands, so do not leave
+      # the token behind after checkout.
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Install SBCL and ocicl
         env:
@@ -36,10 +45,33 @@ jobs:
       - name: Record the toolchain under test
         run: sbcl --version
 
+      # Downloads from ghcr.io can be reset mid-transfer, which fails the run.
+      # ocicl.csv pins every digest, so a cache keyed on its hash holds exactly
+      # what a fresh download would. The key also has the OS so the two jobs
+      # do not race to save the same entry.
+      - name: Cache dependencies
+        uses: actions/cache@v6
+        with:
+          path: ocicl
+          key: ocicl-${{ matrix.os }}-${{ hashFiles('ocicl.csv') }}
+
       # Installs the exact digests pinned in ocicl.csv, so a green run means
-      # the committed lockfile is sufficient to build the project.
+      # the committed lockfile is sufficient to build the project. After a
+      # cache hit, ocicl finds every system present and downloads nothing.
+      #
+      # ocicl retries a reset itself, but only for a few seconds. On a cache
+      # miss, a reset that lasts longer would fail the run, so the whole
+      # install is tried again after a pause. That is safe: ocicl verifies
+      # each download's digest and extracts it in a private directory before
+      # it reaches ocicl/, so a failed attempt leaves nothing half-installed.
       - name: Install dependencies
-        run: ocicl install
+        run: |
+          for attempt in 1 2 3; do
+            ocicl install && exit 0
+            [ "$attempt" = 3 ] && exit 1
+            echo "::warning::ocicl install failed on attempt $attempt; retrying in 20 seconds"
+            sleep 20
+          done
 
       - name: Run tests
         run: make test
