@@ -1,0 +1,16 @@
+# Keep the actions used by CI current.
+#
+# Updates arrive as pull requests, so they go through the same CI and branch
+# rules as any other change. All action updates share one pull request.
+
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci
