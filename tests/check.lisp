@@ -54,7 +54,10 @@ walked here even though discovery skips it.")
     (false (member "posts/2026/first-post/diagram.svg" names :test #'string=))
     (true (member "style.css" names :test #'string=)
           "A stylesheet is named by a layout, not by a document. It appears
-here too. That is why orphans are advice and never a deletion plan.")))
+here too. That is why orphans are advice and never a deletion plan.")
+    (false (find-if (lambda (name) (search ".hidden" name)) names)
+           "Hidden files are not part of the site, so they are not orphans.
+Otherwise every object in .git/ would be reported.")))
 
 (define-test (check duplicates)
   (let* ((report (checked))

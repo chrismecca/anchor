@@ -5,6 +5,24 @@ Notable changes to anchor.
 anchor and SPEC.adoc are versioned separately. SPEC.adoc defines what anchor
 does and what it refuses to do.
 
+== Unreleased
+
+Bug fixes allowed by the freeze.
+
+=== Hidden files are no longer published
+
+Only names that start with `_` were excluded from the output. Every other file
+was copied, so a site kept in git published its `.git/` directory, including
+its full history, with every build. Files such as `.DS_Store` were copied too,
+and `check` reported each of them as an orphan.
+
+A name that starts with `.` is now hidden. anchor does not discover, copy,
+check, or watch hidden files and directories. SPEC.adoc records the rule under
+Hidden names.
+
+A site that needs a dotfile in its output, such as `.well-known/` or
+`.htaccess`, adds it when it deploys.
+
 == 1.0.2
 
 Documentation and fixture prose cleanup.

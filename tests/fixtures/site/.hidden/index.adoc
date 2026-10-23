@@ -1,0 +1,5 @@
+= Hidden
+
+This directory stands in for one that belongs to another tool, such as `.git/`.
+
+Its name starts with a dot, so anchor does not read it. This is not a page.
