@@ -5,9 +5,13 @@ Notable changes to anchor.
 anchor and SPEC.adoc are versioned separately. SPEC.adoc defines what anchor
 does and what it refuses to do.
 
-== Unreleased
+== 1.0.3
 
 Bug fixes allowed by the freeze.
+
+`ocicl.csv` still pins cl-adoc 0.2.0. The full test suite also passes against
+cl-adoc 0.3.0, whose stricter block-attribute parsing reaches anchor as an
+`unreadable-document`.
 
 === Hidden files are no longer published
 
